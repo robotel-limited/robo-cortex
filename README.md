@@ -1,6 +1,11 @@
 # robo-cortex
 
-**A git-aware, evidence-based memory store for AI coding agents.**
+[![PyPI version](https://badge.fury.io/py/robo-cortex.svg)](https://pypi.org/project/robo-cortex/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/robo-cortex.svg)](https://pypi.org/project/robo-cortex/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Smithery Calls](https://smithery.ai/badge/robotel-top/robo-cortex)](https://smithery.ai/servers/robotel-top/robo-cortex)
+
+**Git-aware knowledge integrity for AI coding agents.**
 
 Your AI agent debugs a bug, learns the lesson, and forgets it by next week — or worse, keeps citing a "lesson" that the code has since made false. robo-cortex is a local knowledge base built for that specific failure mode: memories are anchored to git blob hashes, so when the code they're about changes, the memory is automatically flagged for review instead of being silently trusted or silently lost.
 
