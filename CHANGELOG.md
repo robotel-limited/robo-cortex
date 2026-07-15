@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-07-15
+
+Adds the `mcp-name` ownership-verification marker to the README, required to publish robo-cortex to the official MCP Registry (registry.modelcontextprotocol.io). No functional changes.
+
 ## [0.4.0] — 2026-07-15
 
 First public PyPI release. All changes below were already complete in the unpublished `0.3.1` local build — this version bump exists solely to mark the public debut, not to introduce new behavior.

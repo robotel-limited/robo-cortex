@@ -1,5 +1,7 @@
 # robo-cortex
 
+<!-- mcp-name: io.github.robotel-limited/robo-cortex -->
+
 [![PyPI version](https://badge.fury.io/py/robo-cortex.svg)](https://pypi.org/project/robo-cortex/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/robo-cortex.svg)](https://pypi.org/project/robo-cortex/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
