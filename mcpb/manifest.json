@@ -1,0 +1,178 @@
+{
+  "manifest_version": "0.4",
+  "name": "robo-cortex",
+  "display_name": "robo-cortex",
+  "version": "0.4.0",
+  "description": "Git-aware, long-term memory for LLM coding agents working inside a git repository.",
+  "long_description": "robo-cortex is a local knowledge base for AI coding agents. Memories are anchored to git blob hashes, so when the code they describe changes, the memory is automatically flagged for review instead of being silently trusted or silently lost. No embeddings, no vector database, no cloud dependency — a local SQLite store scoped to your repository.",
+  "author": {
+    "name": "Robotel Limited UK",
+    "email": "tech@robotel.top",
+    "url": "https://robotel.top"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robotel-limited/robo-cortex.git"
+  },
+  "homepage": "https://robotel.top",
+  "documentation": "https://github.com/robotel-limited/robo-cortex/blob/main/MCP_TOOLS.md",
+  "support": "https://github.com/robotel-limited/robo-cortex/issues",
+  "server": {
+    "type": "python",
+    "entry_point": "src/server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "src/server.py",
+        "${user_config.repo_path}"
+      ]
+    }
+  },
+  "tools": [
+    {
+      "name": "retrieve_context",
+      "description": "Compact, ranked, budget-honest context pack for a task — the primary read path an agent calls before starting work.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "task": { "type": "string" },
+          "paths": { "type": "array", "items": { "type": "string" } },
+          "budget_items": { "type": "integer" },
+          "budget_tokens": { "type": "integer" }
+        },
+        "required": ["task"]
+      }
+    },
+    {
+      "name": "record_memory",
+      "description": "The only way new memories enter the store; linked paths are validated against HEAD before the row is written.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "scope": { "type": "string" },
+          "statement": { "type": "string" },
+          "confidence": { "type": "string" },
+          "why_it_matters": { "type": "string" },
+          "assumptions": { "type": "string" },
+          "paths": { "type": "array", "items": { "type": "string" } },
+          "lesson_from": { "type": "integer" }
+        },
+        "required": ["type", "scope", "statement", "confidence"]
+      }
+    },
+    {
+      "name": "attach_evidence",
+      "description": "Strengthen an existing memory with provenance, ideally re-runnable.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memory_id": { "type": "integer" },
+          "kind": { "type": "string" },
+          "description": { "type": "string" },
+          "scope": { "type": "string" },
+          "command": { "type": "string" },
+          "expected_outcome": { "type": "string" },
+          "ref": { "type": "string" },
+          "cold_storage_content": { "type": "string" }
+        },
+        "required": ["memory_id", "kind", "description"]
+      }
+    },
+    {
+      "name": "get_memory",
+      "description": "Full detail on one memory: fields, evidence, links, and (with a task) its retrieval score breakdown.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memory_id": { "type": "integer" },
+          "scope": { "type": "string" },
+          "explain_against_task": { "type": "string" }
+        },
+        "required": ["memory_id"]
+      }
+    },
+    {
+      "name": "change_status",
+      "description": "The only way a memory reaches a deliberate final state (superseded, invalidated, abandoned, archived), or is manually restored to active.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memory_id": { "type": "integer" },
+          "new_status": { "type": "string" },
+          "reason": { "type": "string" },
+          "scope": { "type": "string" },
+          "supersedes_link_to": { "type": "integer" }
+        },
+        "required": ["memory_id", "new_status", "reason"]
+      }
+    },
+    {
+      "name": "search_memory",
+      "description": "Exploration and debugging over the memory store — broader and less strictly budgeted than retrieve_context.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "scope": { "type": "string" },
+          "type": { "type": "string" },
+          "status": { "type": "string" },
+          "limit": { "type": "integer" }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "list_affected",
+      "description": "What a diff puts at risk — the proactive half of invalidation, for use before or right after a change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "diff_range": { "type": "string" },
+          "staged": { "type": "boolean" },
+          "working": { "type": "boolean" }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "verify_evidence",
+      "description": "The single, explicit re-verification entry point for evidence, including Gitea-backed evidence.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "evidence_id": { "type": "integer" },
+          "scope": { "type": "string" }
+        },
+        "required": ["evidence_id"]
+      }
+    }
+  ],
+  "keywords": [
+    "ai-agents",
+    "llm",
+    "memory",
+    "git",
+    "sqlite",
+    "mcp",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": ["darwin", "linux", "win32"],
+    "runtimes": {
+      "python": ">=3.11,<4.0"
+    }
+  },
+  "user_config": {
+    "repo_path": {
+      "type": "directory",
+      "title": "Repository path",
+      "description": "The git repository robo-cortex should read and write memory for. Leave empty to use the agent's current working directory.",
+      "required": false
+    }
+  }
+}

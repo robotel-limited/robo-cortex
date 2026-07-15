@@ -1,0 +1,8 @@
+[project]
+name = "robo-cortex-mcpb"
+version = "0.4.0"
+description = "MCPB bundle entry point for robo-cortex's MCP server"
+requires-python = ">=3.11"
+dependencies = [
+    "robo-cortex[mcp]>=0.4.0",
+]
