@@ -1,0 +1,53 @@
+# Example CI job: fail a pull request that touches code linked to a
+# robo-cortex memory without that memory being reviewed.
+#
+# This is a copy-paste starting point, not a robo-cortex feature -- see
+# ROADMAP.md's "Enforcement layers not yet built" for why there's no
+# dedicated `roco ci-gate` subcommand (yet). `roco affected` already has
+# everything this needs.
+#
+# Usage: copy this into .github/workflows/robo-cortex-gate.yml in your own
+# project (not robo-cortex's own repo, which doesn't use robo-cortex on
+# itself) and adjust the base branch if it isn't `main`.
+
+name: robo-cortex memory gate
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-affected-memories:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history -- affected needs to diff against origin/main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install robo-cortex
+
+      - name: roco init (idempotent if already initialized)
+        run: roco init || true
+
+      - name: Check for memories affected by this PR
+        run: |
+          OUTPUT=$(roco affected --diff-range "origin/${{ github.base_ref }}...HEAD" --json)
+          COUNT=$(echo "$OUTPUT" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['data']))")
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::This PR touches code linked to $COUNT memor$([ "$COUNT" = 1 ] && echo y || echo ies) that need review."
+            echo "$OUTPUT" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)['data']
+for item in data:
+    print(f\"  [{item['id']}] {item['reason']}  {item['statement']}\")
+print()
+print('Review with: roco show <id>')
+print('Then re-verify (roco status <id> activate --reason \"...\") or supersede it.')
+"
+            exit 1
+          fi
+          echo "No affected memories -- clear to merge."

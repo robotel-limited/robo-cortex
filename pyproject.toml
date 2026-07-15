@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "robo-cortex"
+dynamic = ["version"]
+description = "Long-term memory system for LLM coding agents working inside a Git repository"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "Robotel Limited UK", email = "tech@robotel.top" }]
+dependencies = [
+    # Core CLI requires only stdlib: SQLite, argparse, pathlib, json
+]
+keywords = ["ai-agents", "llm", "memory", "git", "sqlite", "mcp", "developer-tools"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://robotel.top"
+Repository = "https://github.com/robotel-limited/robo-cortex"
+Issues = "https://github.com/robotel-limited/robo-cortex/issues"
+Changelog = "https://github.com/robotel-limited/robo-cortex/blob/main/CHANGELOG.md"
+
+[project.scripts]
+robo-cortex = "robo_cortex.cli:main"
+roco = "robo_cortex.cli:main"
+
+[project.optional-dependencies]
+# The mission fixes the official SDK for `robo-cortex mcp` (Stage 9) --
+# the one justified third-party dependency; everything else is stdlib.
+mcp = ["mcp>=1.28"]
+dev = ["pytest", "mcp>=1.28"]
+
+[tool.hatch.version]
+path = "src/robo_cortex/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/robo_cortex"]
+
+[tool.hatch.build.targets.sdist]
+# Explicit allowlist: hatchling's default sdist otherwise includes every
+# file on disk not matched by .gitignore, tracked or not -- an internal
+# planning doc or a stray test artifact sitting untracked in the working
+# tree would silently ship in the sdist. Allowlist, not denylist, so a
+# new stray file needs an explicit decision to include, not to exclude.
+include = [
+    "src/robo_cortex",
+    "tests",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "schema.sql",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
