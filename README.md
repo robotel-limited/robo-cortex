@@ -4,8 +4,6 @@
 
 [![PyPI version](https://badge.fury.io/py/robo-cortex.svg)](https://pypi.org/project/robo-cortex/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/robo-cortex.svg)](https://pypi.org/project/robo-cortex/)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/robo-cortex)](https://pypi.org/project/robo-cortex/)
-[![GitHub Stars](https://img.shields.io/github/stars/robotel-limited/robo-cortex?style=flat&logo=github)](https://github.com/robotel-limited/robo-cortex/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Smithery Calls](https://smithery.ai/badge/robotel-top/robo-cortex)](https://smithery.ai/servers/robotel-top/robo-cortex)
 
