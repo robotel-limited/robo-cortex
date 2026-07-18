@@ -1,0 +1,83 @@
+diff --git a/src/robo_cortex/cli/app.py b/src/robo_cortex/cli/app.py
+index a078b1f..afa6539 100644
+--- a/src/robo_cortex/cli/app.py
++++ b/src/robo_cortex/cli/app.py
+@@ -1,12 +1,14 @@
+ """CLI main application and dispatcher."""
+ 
+ import argparse
++import os
+ import sys
+ from pathlib import Path
+ 
+ from robo_cortex import __version__
+ from robo_cortex.cli._common import _get_cmd_name
+ from robo_cortex.cli.commands import ALL_COMMANDS
++from robo_cortex.core.errors import RoboCortexError
+ 
+ 
+ def build_parser(cmd_name: str) -> argparse.ArgumentParser:
+@@ -49,7 +51,24 @@ def main(argv=None):
+         parser.print_help(sys.stderr)
+         return 1
+ 
+-    return args.func(args)
++    try:
++        return args.func(args)
++    except RoboCortexError as error:
++        print(f"{cmd_name}: {error}", file=sys.stderr)
++        if os.environ.get("ROBO_CORTEX_DEBUG"):
++            raise
++        return error.exit_code
++    except (FileNotFoundError, IOError) as error:
++        print(f"{cmd_name}: {error}", file=sys.stderr)
++        if os.environ.get("ROBO_CORTEX_DEBUG"):
++            raise
++        return 1
++    except Exception as error:
++        print(f"{cmd_name}: internal error: {error}", file=sys.stderr)
++        print(f"(set ROBO_CORTEX_DEBUG=1 to see traceback)", file=sys.stderr)
++        if os.environ.get("ROBO_CORTEX_DEBUG"):
++            raise
++        return 1
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/robo_cortex/core/git.py b/src/robo_cortex/core/git.py
+index 1f1a3ac..6e135d2 100644
+--- a/src/robo_cortex/core/git.py
++++ b/src/robo_cortex/core/git.py
+@@ -4,6 +4,20 @@ from pathlib import Path
+ from .errors import NotAGitRepoError, ValidationError
+ 
+ 
++def has_commits(repo_root: Path) -> bool:
++    """Check if repository has any commits.
++
++    Returns False if HEAD points to a non-existent ref (e.g., after git init).
++    """
++    result = subprocess.run(
++        ["git", "rev-parse", "HEAD"],
++        cwd=repo_root,
++        capture_output=True,
++        text=True,
++    )
++    return result.returncode == 0
++
++
+ def resolve_repo_root(start: Path) -> Path:
+     """Find the repository root containing `start` via `git rev-parse --show-toplevel`.
+ 
+@@ -56,7 +70,12 @@ def head_tree(repo_root: Path) -> tuple[dict[str, str], dict[str, list[str]]]:
+     paths), in one `git ls-tree` call. The reverse index is what makes
+     exact-hash rename relinking (ARCHITECTURE.md §5.3) a single lookup
+     instead of an N+1 scan.
++
++    Raises ValidationError if the repository has no commits.
+     """
++    if not has_commits(repo_root):
++        raise ValidationError("repository has no commits yet")
++
+     result = subprocess.run(
+         ["git", "ls-tree", "-r", "HEAD"],
+         cwd=repo_root,

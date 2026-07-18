@@ -1,0 +1,70 @@
+{
+  "task": "a3",
+  "arm": "baseline",
+  "run": 3,
+  "wall_clock_s": 209.9,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 34.54s",
+  "claude": {
+    "duration_ms": 209060,
+    "duration_api_ms": 102176,
+    "num_turns": 33,
+    "total_cost_usd": 0.23138894999999998,
+    "usage": {
+      "input_tokens": 190,
+      "cache_creation_input_tokens": 51823,
+      "cache_read_input_tokens": 1343992,
+      "output_tokens": 6252,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 51823,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 6,
+          "output_tokens": 353,
+          "cache_read_input_tokens": 60422,
+          "cache_creation_input_tokens": 157,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 157
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 676,
+        "outputTokens": 17,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.000761,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 190,
+        "outputTokens": 6252,
+        "cacheReadInputTokens": 1343992,
+        "cacheCreationInputTokens": 51823,
+        "webSearchRequests": 0,
+        "costUSD": 0.23062795000000003,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/cli/commands/transfer.py |  6 +++++-\n src/robo_cortex/core/errors.py           |  4 ++++\n src/robo_cortex/core/git.py              | 21 +++++++++++++--------\n 3 files changed, 22 insertions(+), 9 deletions(-)\n"
+}

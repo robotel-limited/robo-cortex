@@ -1,0 +1,28 @@
+diff --git a/src/robo_cortex/core/evidence.py b/src/robo_cortex/core/evidence.py
+index 7b5d49c..d884aef 100644
+--- a/src/robo_cortex/core/evidence.py
++++ b/src/robo_cortex/core/evidence.py
+@@ -85,7 +85,6 @@ def attach_evidence(
+ 
+         if memory["status"] == "provisional":
+             conn.execute("UPDATE memory SET status = 'active' WHERE id = ?", (memory_id,))
+-            reverify(conn, repo_root, memory_id)
+ 
+         conn.execute("COMMIT")
+     except Exception:
+diff --git a/src/robo_cortex/core/lifecycle.py b/src/robo_cortex/core/lifecycle.py
+index e64dc6b..754c8fd 100644
+--- a/src/robo_cortex/core/lifecycle.py
++++ b/src/robo_cortex/core/lifecycle.py
+@@ -77,11 +77,6 @@ def change_status(
+                 "INSERT INTO memory_link (from_id, to_id, link_type) VALUES (?, ?, 'supersedes')",
+                 (memory_id, supersedes_link_to),
+             )
+-        if new_status == "active":
+-            # "I checked, it's still true" must actually mean something: recapture
+-            # linked-path hashes and last_verified_at, or the next staleness check
+-            # re-flags this immediately against the same stale stored hash.
+-            reverify(conn, repo_root, memory_id)
+         conn.execute("COMMIT")
+     except Exception:
+         conn.execute("ROLLBACK")

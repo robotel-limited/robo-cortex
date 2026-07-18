@@ -1,0 +1,49 @@
+diff --git a/src/robo_cortex/cli/commands/transfer.py b/src/robo_cortex/cli/commands/transfer.py
+index 09c1984..15bd474 100644
+--- a/src/robo_cortex/cli/commands/transfer.py
++++ b/src/robo_cortex/cli/commands/transfer.py
+@@ -58,7 +58,12 @@ def run_import(args) -> int:
+ @cli_command("merge")
+ def run_merge(args) -> int:
+     """Merge two JSONL knowledge bases, de-duplicating by ID+scope."""
+-    memories, result = merge_jsonl(args.file1, args.file2)
++    try:
++        memories, result = merge_jsonl(args.file1, args.file2)
++    except FileNotFoundError as error:
++        # Let cli_command decorator handle this by raising ValidationError
++        from robo_cortex.core.errors import ValidationError
++        raise ValidationError(f"input file not found: {error.filename}") from error
+ 
+     # Write merged output
+     with open(args.output, "w") as f:
+diff --git a/src/robo_cortex/core/git.py b/src/robo_cortex/core/git.py
+index 1f1a3ac..b10cde5 100644
+--- a/src/robo_cortex/core/git.py
++++ b/src/robo_cortex/core/git.py
+@@ -57,13 +57,19 @@ def head_tree(repo_root: Path) -> tuple[dict[str, str], dict[str, list[str]]]:
+     exact-hash rename relinking (ARCHITECTURE.md §5.3) a single lookup
+     instead of an N+1 scan.
+     """
+-    result = subprocess.run(
+-        ["git", "ls-tree", "-r", "HEAD"],
+-        cwd=repo_root,
+-        capture_output=True,
+-        text=True,
+-        check=True,
+-    )
++    try:
++        result = subprocess.run(
++            ["git", "ls-tree", "-r", "HEAD"],
++            cwd=repo_root,
++            capture_output=True,
++            text=True,
++            check=True,
++        )
++    except subprocess.CalledProcessError as error:
++        raise ValidationError(
++            f"cannot access HEAD in repository at {repo_root}: "
++            "no commits yet. Commit at least one file with 'git add' and 'git commit'."
++        ) from error
+     path_to_hash: dict[str, str] = {}
+     hash_to_paths: dict[str, list[str]] = {}
+     for line in result.stdout.splitlines():

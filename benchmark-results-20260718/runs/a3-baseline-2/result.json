@@ -1,0 +1,70 @@
+{
+  "task": "a3",
+  "arm": "baseline",
+  "run": 2,
+  "wall_clock_s": 231.3,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 34.25s",
+  "claude": {
+    "duration_ms": 230602,
+    "duration_api_ms": 123452,
+    "num_turns": 41,
+    "total_cost_usd": 0.25528629999999997,
+    "usage": {
+      "input_tokens": 237,
+      "cache_creation_input_tokens": 45502,
+      "cache_read_input_tokens": 1609958,
+      "output_tokens": 7283,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 45502,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 6,
+          "output_tokens": 409,
+          "cache_read_input_tokens": 54080,
+          "cache_creation_input_tokens": 178,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 178
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 676,
+        "outputTokens": 17,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.000761,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 237,
+        "outputTokens": 7283,
+        "cacheReadInputTokens": 1609958,
+        "cacheCreationInputTokens": 45502,
+        "webSearchRequests": 0,
+        "costUSD": 0.25452529999999995,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/cli/commands/transfer.py |  6 +++++-\n src/robo_cortex/core/invalidate.py       | 25 +++++++++++++++----------\n 2 files changed, 20 insertions(+), 11 deletions(-)\n"
+}

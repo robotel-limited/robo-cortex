@@ -1,0 +1,85 @@
+diff --git a/src/robo_cortex/cli/app.py b/src/robo_cortex/cli/app.py
+index a078b1f..8d4e17e 100644
+--- a/src/robo_cortex/cli/app.py
++++ b/src/robo_cortex/cli/app.py
+@@ -7,6 +7,7 @@ from pathlib import Path
+ from robo_cortex import __version__
+ from robo_cortex.cli._common import _get_cmd_name
+ from robo_cortex.cli.commands import ALL_COMMANDS
++from robo_cortex.core.errors import RoboCortexError
+ 
+ 
+ def build_parser(cmd_name: str) -> argparse.ArgumentParser:
+@@ -49,7 +50,20 @@ def main(argv=None):
+         parser.print_help(sys.stderr)
+         return 1
+ 
+-    return args.func(args)
++    try:
++        return args.func(args)
++    except RoboCortexError as e:
++        print(f"{cmd_name}: {e}", file=sys.stderr)
++        return e.exit_code
++    except FileNotFoundError as e:
++        print(f"{cmd_name}: {e}", file=sys.stderr)
++        return 1
++    except Exception:
++        print(f"{cmd_name}: internal error (set ROBO_CORTEX_DEBUG=1 for traceback)", file=sys.stderr)
++        import os
++        if os.environ.get("ROBO_CORTEX_DEBUG") == "1":
++            raise
++        return 1
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/robo_cortex/core/git.py b/src/robo_cortex/core/git.py
+index 1f1a3ac..5cb82d5 100644
+--- a/src/robo_cortex/core/git.py
++++ b/src/robo_cortex/core/git.py
+@@ -4,6 +4,26 @@ from pathlib import Path
+ from .errors import NotAGitRepoError, ValidationError
+ 
+ 
++def has_commits(repo_root: Path) -> None:
++    """Check if the repository has at least one commit.
++
++    Raises ValidationError if there are no commits yet. This guard prevents
++    git commands like `git ls-tree HEAD` from failing with raw CalledProcessError.
++    """
++    try:
++        result = subprocess.run(
++            ["git", "rev-parse", "HEAD"],
++            cwd=repo_root,
++            capture_output=True,
++            text=True,
++            check=True,
++        )
++    except subprocess.CalledProcessError:
++        raise ValidationError(
++            "repository has no commits yet. Run 'git commit' to create at least one commit first."
++        )
++
++
+ def resolve_repo_root(start: Path) -> Path:
+     """Find the repository root containing `start` via `git rev-parse --show-toplevel`.
+ 
+diff --git a/src/robo_cortex/core/invalidate.py b/src/robo_cortex/core/invalidate.py
+index f169a09..f426218 100644
+--- a/src/robo_cortex/core/invalidate.py
++++ b/src/robo_cortex/core/invalidate.py
+@@ -8,6 +8,7 @@ from .git import (
+     blob_hash_at_head,
+     blob_hash_at_rev,
+     diff_touched_paths,
++    has_commits,
+     head_tree,
+     working_tree_hash,
+ )
+@@ -122,6 +123,7 @@ def refresh_staleness(
+     if current_head and current_head == cached_head:
+         return []
+ 
++    has_commits(repo_root)
+     path_to_hash, hash_to_paths = head_tree(repo_root)
+ 
+     placeholders = ",".join("?" for _ in ACTIVE_LIKE_STATUSES)

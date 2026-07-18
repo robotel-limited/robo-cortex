@@ -1,0 +1,78 @@
+diff --git a/src/robo_cortex/cli/app.py b/src/robo_cortex/cli/app.py
+index a078b1f..9640df6 100644
+--- a/src/robo_cortex/cli/app.py
++++ b/src/robo_cortex/cli/app.py
+@@ -1,6 +1,7 @@
+ """CLI main application and dispatcher."""
+ 
+ import argparse
++import os
+ import sys
+ from pathlib import Path
+ 
+@@ -49,7 +50,14 @@ def main(argv=None):
+         parser.print_help(sys.stderr)
+         return 1
+ 
+-    return args.func(args)
++    try:
++        return args.func(args)
++    except Exception as error:
++        print(f"{cmd_name}: internal error: {error}", file=sys.stderr)
++        if os.environ.get("ROBO_CORTEX_DEBUG"):
++            raise
++        print(f"(set ROBO_CORTEX_DEBUG=1 for a full traceback)", file=sys.stderr)
++        return 1
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/robo_cortex/cli/commands/transfer.py b/src/robo_cortex/cli/commands/transfer.py
+index 09c1984..a0ecfd5 100644
+--- a/src/robo_cortex/cli/commands/transfer.py
++++ b/src/robo_cortex/cli/commands/transfer.py
+@@ -58,7 +58,12 @@ def run_import(args) -> int:
+ @cli_command("merge")
+ def run_merge(args) -> int:
+     """Merge two JSONL knowledge bases, de-duplicating by ID+scope."""
+-    memories, result = merge_jsonl(args.file1, args.file2)
++    from robo_cortex.core.errors import ValidationError
++
++    try:
++        memories, result = merge_jsonl(args.file1, args.file2)
++    except FileNotFoundError as error:
++        raise ValidationError(f"input file not found: {error.filename}") from error
+ 
+     # Write merged output
+     with open(args.output, "w") as f:
+diff --git a/src/robo_cortex/core/git.py b/src/robo_cortex/core/git.py
+index 1f1a3ac..7e1e214 100644
+--- a/src/robo_cortex/core/git.py
++++ b/src/robo_cortex/core/git.py
+@@ -57,13 +57,20 @@ def head_tree(repo_root: Path) -> tuple[dict[str, str], dict[str, list[str]]]:
+     exact-hash rename relinking (ARCHITECTURE.md §5.3) a single lookup
+     instead of an N+1 scan.
+     """
+-    result = subprocess.run(
+-        ["git", "ls-tree", "-r", "HEAD"],
+-        cwd=repo_root,
+-        capture_output=True,
+-        text=True,
+-        check=True,
+-    )
++    try:
++        result = subprocess.run(
++            ["git", "ls-tree", "-r", "HEAD"],
++            cwd=repo_root,
++            capture_output=True,
++            text=True,
++            check=True,
++        )
++    except subprocess.CalledProcessError as error:
++        if error.returncode == 128:
++            raise ValidationError(
++                "repository has no commits yet. Create an initial commit before using retrieve or affected."
++            ) from error
++        raise
+     path_to_hash: dict[str, str] = {}
+     hash_to_paths: dict[str, list[str]] = {}
+     for line in result.stdout.splitlines():

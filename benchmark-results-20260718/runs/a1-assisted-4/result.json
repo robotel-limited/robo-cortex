@@ -1,0 +1,70 @@
+{
+  "task": "a1",
+  "arm": "assisted",
+  "run": 4,
+  "wall_clock_s": 177.7,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 36.80s",
+  "claude": {
+    "duration_ms": 176995,
+    "duration_api_ms": 64000,
+    "num_turns": 15,
+    "total_cost_usd": 0.10114145,
+    "usage": {
+      "input_tokens": 87,
+      "cache_creation_input_tokens": 29657,
+      "cache_read_input_tokens": 436772,
+      "output_tokens": 3780,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 29657,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 6,
+          "output_tokens": 329,
+          "cache_read_input_tokens": 37591,
+          "cache_creation_input_tokens": 172,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 172
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 1326,
+        "outputTokens": 16,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.001406,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 87,
+        "outputTokens": 3780,
+        "cacheReadInputTokens": 436772,
+        "cacheCreationInputTokens": 29657,
+        "webSearchRequests": 0,
+        "costUSD": 0.09973545,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/core/evidence.py  | 1 +\n src/robo_cortex/core/lifecycle.py | 2 ++\n 2 files changed, 3 insertions(+)\n"
+}

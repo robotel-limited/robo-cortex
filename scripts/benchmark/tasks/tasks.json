@@ -1,0 +1,38 @@
+{
+  "a1": {
+    "name": "reverify-on-activate",
+    "patch": "a1-bug.patch",
+    "source_fix_commit": "dfe4a1a",
+    "failing_tests": [
+      "tests/test_reverify.py::test_activate_breaks_the_reflag_loop_for_edited_path",
+      "tests/test_reverify.py::test_activate_bumps_last_verified_at",
+      "tests/test_reverify.py::test_attach_evidence_promotion_also_reverifies"
+    ],
+    "bug_report": "Bug report from a user: I recorded a memory linked to a file, then edited and committed that file. retrieve correctly flagged the memory as needs_review. I confirmed the lesson still holds and ran `roco status <id> activate`, which exited 0. But the very next retrieve flags the same memory needs_review again, forever. Marking a memory as re-verified seems to have no lasting effect. A related report says evidence-based auto-promotion from provisional to active has the same problem.",
+    "retrieve_task_query": "activate memory needs_review flag comes back after re-verify"
+  },
+  "a2": {
+    "name": "comment-only-reanchor",
+    "patch": "a2-bug.patch",
+    "source_fix_commit": "01ffbea",
+    "failing_tests": [
+      "tests/test_invalidate.py::test_comment_only_python_edit_does_not_flag",
+      "tests/test_invalidate.py::test_whitespace_only_python_edit_does_not_flag",
+      "tests/test_invalidate.py::test_reanchor_updates_stored_blob_hash"
+    ],
+    "bug_report": "Bug report from a user: adding a single comment line (or a trailing blank line) to a Python file that a memory is linked to flags that memory needs_review on the next retrieve, even though nothing meaningful changed in the code. Cosmetic edits should not invalidate memories about .py files; the memory should stay healthy and follow the file's new version.",
+    "retrieve_task_query": "comment whitespace only edit python file flags memory needs_review spurious"
+  },
+  "a3": {
+    "name": "empty-repo-clean-errors",
+    "patch": "a3-bug.patch",
+    "source_fix_commit": "004757f",
+    "failing_tests": [
+      "tests/test_transfer.py::test_cli_merge_missing_file_exits_cleanly",
+      "tests/test_transfer.py::test_cli_retrieve_no_commits_clean_error",
+      "tests/test_transfer.py::test_cli_affected_no_commits_clean_error"
+    ],
+    "bug_report": "Bug report from a user: on a freshly `git init`-ed repository with zero commits, `roco retrieve` and `roco affected` crash with a raw Python traceback (CalledProcessError, exit 128 from git) instead of a clean one-line error message. Similarly, `roco merge` with a missing input file dumps a full traceback. CLI commands should never leak raw tracebacks for expected failure conditions.",
+    "retrieve_task_query": "roco retrieve crash traceback repo without commits git init clean error"
+  }
+}

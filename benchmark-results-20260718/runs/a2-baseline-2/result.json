@@ -1,0 +1,70 @@
+{
+  "task": "a2",
+  "arm": "baseline",
+  "run": 2,
+  "wall_clock_s": 176.9,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 37.12s",
+  "claude": {
+    "duration_ms": 176205,
+    "duration_api_ms": 66466,
+    "num_turns": 16,
+    "total_cost_usd": 0.1013049,
+    "usage": {
+      "input_tokens": 98,
+      "cache_creation_input_tokens": 29872,
+      "cache_read_input_tokens": 456139,
+      "output_tokens": 3501,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 29872,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 6,
+          "output_tokens": 441,
+          "cache_read_input_tokens": 38481,
+          "cache_creation_input_tokens": 165,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 165
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 658,
+        "outputTokens": 18,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.000748,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 98,
+        "outputTokens": 3501,
+        "cacheReadInputTokens": 456139,
+        "cacheCreationInputTokens": 29872,
+        "webSearchRequests": 0,
+        "costUSD": 0.1005569,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/core/invalidate.py | 11 +++++++++++\n 1 file changed, 11 insertions(+)\n"
+}

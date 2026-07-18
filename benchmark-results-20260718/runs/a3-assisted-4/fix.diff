@@ -1,0 +1,72 @@
+diff --git a/src/robo_cortex/cli/app.py b/src/robo_cortex/cli/app.py
+index a078b1f..d026d05 100644
+--- a/src/robo_cortex/cli/app.py
++++ b/src/robo_cortex/cli/app.py
+@@ -7,6 +7,7 @@ from pathlib import Path
+ from robo_cortex import __version__
+ from robo_cortex.cli._common import _get_cmd_name
+ from robo_cortex.cli.commands import ALL_COMMANDS
++from robo_cortex.core.errors import RoboCortexError
+ 
+ 
+ def build_parser(cmd_name: str) -> argparse.ArgumentParser:
+@@ -49,7 +50,20 @@ def main(argv=None):
+         parser.print_help(sys.stderr)
+         return 1
+ 
+-    return args.func(args)
++    try:
++        return args.func(args)
++    except RoboCortexError as error:
++        print(f"{cmd_name}: {error}", file=sys.stderr)
++        return error.exit_code
++    except FileNotFoundError as error:
++        print(f"{cmd_name}: file not found: {error.filename}", file=sys.stderr)
++        return 1
++    except Exception as error:
++        print(f"{cmd_name}: internal error: {error}", file=sys.stderr)
++        print(f"  (re-run with ROBO_CORTEX_DEBUG=1 for full traceback)", file=sys.stderr)
++        if __debug__:
++            raise
++        return 1
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/robo_cortex/core/git.py b/src/robo_cortex/core/git.py
+index 1f1a3ac..5787139 100644
+--- a/src/robo_cortex/core/git.py
++++ b/src/robo_cortex/core/git.py
+@@ -4,6 +4,20 @@ from pathlib import Path
+ from .errors import NotAGitRepoError, ValidationError
+ 
+ 
++def has_commits(repo_root: Path) -> bool:
++    """Check if a repository has any commits.
++
++    Returns False for a freshly initialized git repo with zero commits.
++    """
++    result = subprocess.run(
++        ["git", "rev-parse", "HEAD"],
++        cwd=repo_root,
++        capture_output=True,
++        text=True,
++    )
++    return result.returncode == 0
++
++
+ def resolve_repo_root(start: Path) -> Path:
+     """Find the repository root containing `start` via `git rev-parse --show-toplevel`.
+ 
+@@ -57,6 +71,12 @@ def head_tree(repo_root: Path) -> tuple[dict[str, str], dict[str, list[str]]]:
+     exact-hash rename relinking (ARCHITECTURE.md §5.3) a single lookup
+     instead of an N+1 scan.
+     """
++    if not has_commits(repo_root):
++        raise ValidationError(
++            "Repository has no commits yet. Make your first commit with "
++            "'git add' and 'git commit' before using retrieve, affected, or search."
++        )
++
+     result = subprocess.run(
+         ["git", "ls-tree", "-r", "HEAD"],
+         cwd=repo_root,

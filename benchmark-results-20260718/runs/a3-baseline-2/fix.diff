@@ -1,0 +1,61 @@
+diff --git a/src/robo_cortex/cli/commands/transfer.py b/src/robo_cortex/cli/commands/transfer.py
+index 09c1984..d60efff 100644
+--- a/src/robo_cortex/cli/commands/transfer.py
++++ b/src/robo_cortex/cli/commands/transfer.py
+@@ -5,6 +5,7 @@ import sys
+ 
+ from robo_cortex.core.transfer import export_memories, import_memories, merge_jsonl
+ from robo_cortex.core.memory import _MEMORY_COLUMNS
++from robo_cortex.core.errors import NotFoundError
+ from robo_cortex.cli._common import _get_cmd_name, _store, _store_conn, _global_store, cli_command
+ 
+ 
+@@ -58,7 +59,10 @@ def run_import(args) -> int:
+ @cli_command("merge")
+ def run_merge(args) -> int:
+     """Merge two JSONL knowledge bases, de-duplicating by ID+scope."""
+-    memories, result = merge_jsonl(args.file1, args.file2)
++    try:
++        memories, result = merge_jsonl(args.file1, args.file2)
++    except FileNotFoundError as error:
++        raise NotFoundError(f"input file not found: {error.filename}") from error
+ 
+     # Write merged output
+     with open(args.output, "w") as f:
+diff --git a/src/robo_cortex/core/invalidate.py b/src/robo_cortex/core/invalidate.py
+index f169a09..eff0ae6 100644
+--- a/src/robo_cortex/core/invalidate.py
++++ b/src/robo_cortex/core/invalidate.py
+@@ -109,17 +109,22 @@ def refresh_staleness(
+     except (subprocess.CalledProcessError, OSError):
+         current_head = None
+ 
+-    cached_head = None
+-    if current_head:
+-        try:
+-            row = conn.execute(
+-                "SELECT value FROM meta WHERE key = 'last_refresh_head'"
+-            ).fetchone()
+-            cached_head = row[0] if row else None
+-        except sqlite3.OperationalError:
+-            cached_head = None
++    if not current_head:
++        raise ValidationError(
++            "repository has no commits yet — make an initial commit before using "
++            "this command"
++        )
+ 
+-    if current_head and current_head == cached_head:
++    cached_head = None
++    try:
++        row = conn.execute(
++            "SELECT value FROM meta WHERE key = 'last_refresh_head'"
++        ).fetchone()
++        cached_head = row[0] if row else None
++    except sqlite3.OperationalError:
++        cached_head = None
++
++    if current_head == cached_head:
+         return []
+ 
+     path_to_hash, hash_to_paths = head_tree(repo_root)

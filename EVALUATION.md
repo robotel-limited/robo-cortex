@@ -490,6 +490,15 @@ indentation-width change (`tests/test_invalidate.py::test_semantic_variable_rena
 
 ## 9. Token-economy report (informative, non-gating)
 
+> **Superseded (2026-07-18):** the pilot below (1 task × 3 runs/arm) has been
+> superseded as the primary token-economy measurement by a larger benchmark —
+> 3 tasks × 2 arms × 5 runs, 30/30 correct fixes, ~12% fresh-token / ~15%
+> cost savings (medians), measured recording cost with break-even K*≈5
+> sessions. See [docs/benchmark-results.md](docs/benchmark-results.md); raw
+> logs in [benchmark-results-20260718/](benchmark-results-20260718/). The
+> section below is retained unchanged as the historical record it documents
+> (different subject model — the two are not directly comparable).
+
 Per `TOKEN_ECONOMY_PROTOCOL.md` (an internal process document not included in this
 release). Does not affect
 the Phase 4 pass/fail verdict above (frozen at Gate B); feeds the Stage 12 roadmap

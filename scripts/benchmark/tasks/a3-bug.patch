@@ -1,0 +1,139 @@
+diff --git a/src/robo_cortex/cli/app.py b/src/robo_cortex/cli/app.py
+index c707cbb..a078b1f 100644
+--- a/src/robo_cortex/cli/app.py
++++ b/src/robo_cortex/cli/app.py
+@@ -1,7 +1,6 @@
+ """CLI main application and dispatcher."""
+ 
+ import argparse
+-import os
+ import sys
+ from pathlib import Path
+ 
+@@ -50,24 +49,7 @@ def main(argv=None):
+         parser.print_help(sys.stderr)
+         return 1
+ 
+-    try:
+-        return args.func(args)
+-    except Exception as error:
+-        # Last-resort net: every expected failure mode is already a
+-        # RoboCortexError caught by @cli_command inside args.func, printed
+-        # cleanly with the right exit code. Anything that reaches here is
+-        # unexpected -- still no raw traceback by default (that's an
+-        # implementation detail leaking into a CLI's stdout/stderr contract),
+-        # but ROBO_CORTEX_DEBUG=1 gets the real one back for debugging.
+-        if os.environ.get("ROBO_CORTEX_DEBUG"):
+-            raise
+-        print(f"{cmd_name}: internal error: {error}", file=sys.stderr)
+-        print(
+-            f"{cmd_name}: this is unexpected -- set ROBO_CORTEX_DEBUG=1 for "
+-            "a full traceback, and please report it",
+-            file=sys.stderr,
+-        )
+-        return 1
++    return args.func(args)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/robo_cortex/cli/commands/init.py b/src/robo_cortex/cli/commands/init.py
+index 81b74b6..dc19c80 100644
+--- a/src/robo_cortex/cli/commands/init.py
++++ b/src/robo_cortex/cli/commands/init.py
+@@ -22,8 +22,6 @@ def run(args) -> int:
+         print(f"Initialized robo-cortex in {result['db_path']}")
+         if result["gitignore_updated"]:
+             print(f"Added .cortex/ to {result['repo_root']}/.gitignore")
+-        if "warning" in result:
+-            print(f"warning: {result['warning']}", file=sys.stderr)
+     return 0
+ 
+ 
+diff --git a/src/robo_cortex/core/git.py b/src/robo_cortex/core/git.py
+index cddac5b..1f1a3ac 100644
+--- a/src/robo_cortex/core/git.py
++++ b/src/robo_cortex/core/git.py
+@@ -51,44 +51,19 @@ def blob_hash_at_head(repo_root: Path, path: str) -> str:
+     return result.stdout.strip()
+ 
+ 
+-def has_commits(repo_root: Path) -> bool:
+-    """Whether HEAD resolves to a real commit -- False for a freshly
+-    `git init`-ed repo before its first commit. Every git-aware feature
+-    (staleness refresh, `affected`, path linking) needs at least one
+-    commit to have something to compare against; this is the one cheap
+-    check that lets callers say so clearly instead of letting `git
+-    ls-tree HEAD` fail with a bare exit 128.
+-    """
+-    result = subprocess.run(
+-        ["git", "rev-parse", "--verify", "-q", "HEAD"],
+-        cwd=repo_root,
+-        capture_output=True,
+-        text=True,
+-    )
+-    return result.returncode == 0
+-
+-
+ def head_tree(repo_root: Path) -> tuple[dict[str, str], dict[str, list[str]]]:
+     """Every path -> blob_hash at HEAD, and its reverse index (blob_hash ->
+     paths), in one `git ls-tree` call. The reverse index is what makes
+     exact-hash rename relinking (ARCHITECTURE.md §5.3) a single lookup
+     instead of an N+1 scan.
+-
+-    Raises ValidationError (not a raw CalledProcessError) if the repository
+-    has no commits yet -- HEAD doesn't resolve, so there is no tree to walk.
+     """
+     result = subprocess.run(
+         ["git", "ls-tree", "-r", "HEAD"],
+         cwd=repo_root,
+         capture_output=True,
+         text=True,
++        check=True,
+     )
+-    if result.returncode != 0:
+-        raise ValidationError(
+-            "this repository has no commits yet -- robo-cortex's git-aware "
+-            "features (retrieve/search/affected staleness checks) need at "
+-            "least one commit to compare against. Run 'git commit' first."
+-        )
+     path_to_hash: dict[str, str] = {}
+     hash_to_paths: dict[str, list[str]] = {}
+     for line in result.stdout.splitlines():
+diff --git a/src/robo_cortex/core/init.py b/src/robo_cortex/core/init.py
+index dcdb812..2467edc 100644
+--- a/src/robo_cortex/core/init.py
++++ b/src/robo_cortex/core/init.py
+@@ -2,7 +2,7 @@ from pathlib import Path
+ 
+ from .db import connect, migrate
+ from .errors import AlreadyInitializedError
+-from .git import has_commits, resolve_repo_root
++from .git import resolve_repo_root
+ 
+ CORTEX_DIRNAME = ".cortex"
+ DB_FILENAME = "memory.db"
+@@ -37,23 +37,12 @@ def init_repo(repo_arg: str | None) -> dict:
+ 
+     gitignore_updated = _ensure_gitignore(repo_root)
+ 
+-    result = {
++    return {
+         "repo_root": str(repo_root),
+         "db_path": str(db_path),
+         "schema_version": version,
+         "gitignore_updated": gitignore_updated,
+     }
+-    if not has_commits(repo_root):
+-        # A warning, not a refusal (§FAQ: robo-cortex requires git, but an
+-        # empty repo is a legitimate starting point) -- but record/retrieve/
+-        # affected all need a real commit to compare against, so surface
+-        # this now rather than let the first git-aware command fail cold.
+-        result["warning"] = (
+-            "this repository has no commits yet -- robo-cortex's git-aware "
+-            "features (retrieve/search/affected, path-linked memories) need "
+-            "at least one commit to compare against. Run 'git commit' first."
+-        )
+-    return result
+ 
+ 
+ def _ensure_gitignore(repo_root: Path) -> bool:

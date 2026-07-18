@@ -1,0 +1,70 @@
+{
+  "task": "a1",
+  "arm": "assisted",
+  "run": 3,
+  "wall_clock_s": 148.9,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 35.73s",
+  "claude": {
+    "duration_ms": 148009,
+    "duration_api_ms": 73625,
+    "num_turns": 15,
+    "total_cost_usd": 0.09373965000000001,
+    "usage": {
+      "input_tokens": 86,
+      "cache_creation_input_tokens": 24769,
+      "cache_read_input_tokens": 374364,
+      "output_tokens": 4769,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 24769,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 5,
+          "output_tokens": 340,
+          "cache_read_input_tokens": 32023,
+          "cache_creation_input_tokens": 852,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 852
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 1326,
+        "outputTokens": 17,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.001411,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 86,
+        "outputTokens": 4769,
+        "cacheReadInputTokens": 374364,
+        "cacheCreationInputTokens": 24769,
+        "webSearchRequests": 0,
+        "costUSD": 0.09232865000000001,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/core/evidence.py  | 6 +++++-\n src/robo_cortex/core/lifecycle.py | 3 +++\n 2 files changed, 8 insertions(+), 1 deletion(-)\n"
+}

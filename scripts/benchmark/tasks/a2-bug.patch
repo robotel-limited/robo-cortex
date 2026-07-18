@@ -1,0 +1,43 @@
+diff --git a/src/robo_cortex/core/invalidate.py b/src/robo_cortex/core/invalidate.py
+index f169a09..249e66d 100644
+--- a/src/robo_cortex/core/invalidate.py
++++ b/src/robo_cortex/core/invalidate.py
+@@ -12,7 +12,6 @@ from .git import (
+     working_tree_hash,
+ )
+ from .memory import ACTIVE_LIKE_STATUSES, EXCLUDED_STATUSES, get_memory
+-from .semantic import python_source_is_semantically_equivalent
+ 
+ STALE_AFTER_DAYS = 180
+ 
+@@ -23,30 +22,11 @@ def _parse_timestamp(value: str) -> datetime:
+     return datetime.fromisoformat(value.replace("Z", "+00:00"))
+ 
+ 
+-def _is_comment_or_whitespace_only_change(repo_root: Path, old_hash: str, new_hash: str) -> bool:
+-    """True only if both blobs decode and tokenize as equivalent Python.
+-
+-    Any failure (non-UTF8 content, a syntax error, a .py file that isn't
+-    actually Python) degrades to False -- "cannot prove this is cosmetic,"
+-    the fail-safe default that preserves today's flag-everything behavior.
+-    """
+-    try:
+-        old_source = blob_content(repo_root, old_hash).decode("utf-8")
+-        new_source = blob_content(repo_root, new_hash).decode("utf-8")
+-        return python_source_is_semantically_equivalent(old_source, new_source)
+-    except Exception:
+-        return False
+-
+-
+ def _check_path(repo_root, path_to_hash, hash_to_paths, path, stored_hash):
+     if path in path_to_hash:
+         current_hash = path_to_hash[path]
+         if current_hash == stored_hash:
+             return {"status": "ok"}
+-        if path.endswith(".py") and _is_comment_or_whitespace_only_change(
+-            repo_root, stored_hash, current_hash
+-        ):
+-            return {"status": "reanchored", "new_hash": current_hash}
+         return {"status": "changed", "reason": f"path_changed:{path}"}
+ 
+     candidates = hash_to_paths.get(stored_hash, [])

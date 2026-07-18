@@ -1,0 +1,9 @@
+You are working in the robo-cortex repository: a git-aware, evidence-based memory store for AI coding agents (pure Python, stdlib + SQLite, no external deps). Source in src/robo_cortex/, tests in tests/, design docs in ARCHITECTURE.md.
+
+Bug report from a user: adding a single comment line (or a trailing blank line) to a Python file that a memory is linked to flags that memory needs_review on the next retrieve, even though nothing meaningful changed in the code. Cosmetic edits should not invalidate memories about .py files; the memory should stay healthy and follow the file's new version.
+
+The test suite currently has failing tests related to this bug. Reproduce with:
+
+    python3 -m pytest tests/ -q --deselect tests/test_smoke.py::test_version_is_set
+
+Find the root cause and fix it in the source code. Do NOT modify anything under tests/. You are done when the full command above passes with 0 failures.

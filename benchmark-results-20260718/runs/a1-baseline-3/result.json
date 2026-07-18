@@ -1,0 +1,70 @@
+{
+  "task": "a1",
+  "arm": "baseline",
+  "run": 3,
+  "wall_clock_s": 183.8,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 35.94s",
+  "claude": {
+    "duration_ms": 183057,
+    "duration_api_ms": 70226,
+    "num_turns": 19,
+    "total_cost_usd": 0.11797379999999999,
+    "usage": {
+      "input_tokens": 101,
+      "cache_creation_input_tokens": 31902,
+      "cache_read_input_tokens": 520223,
+      "output_tokens": 5038,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 31902,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 6,
+          "output_tokens": 512,
+          "cache_read_input_tokens": 40462,
+          "cache_creation_input_tokens": 184,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 184
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 688,
+        "outputTokens": 19,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0007830000000000001,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 101,
+        "outputTokens": 5038,
+        "cacheReadInputTokens": 520223,
+        "cacheCreationInputTokens": 31902,
+        "webSearchRequests": 0,
+        "costUSD": 0.11719079999999998,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/core/evidence.py  | 1 +\n src/robo_cortex/core/lifecycle.py | 2 ++\n 2 files changed, 3 insertions(+)\n"
+}

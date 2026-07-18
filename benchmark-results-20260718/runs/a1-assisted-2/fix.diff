@@ -1,0 +1,28 @@
+diff --git a/src/robo_cortex/core/evidence.py b/src/robo_cortex/core/evidence.py
+index d884aef..e41800c 100644
+--- a/src/robo_cortex/core/evidence.py
++++ b/src/robo_cortex/core/evidence.py
+@@ -91,6 +91,9 @@ def attach_evidence(
+         conn.execute("ROLLBACK")
+         raise
+ 
++    if memory["status"] == "provisional":
++        reverify(conn, repo_root, memory_id)
++
+     return {"evidence_id": evidence_id, "memory_evidence_strength": evidence_strength(conn, memory_id)}
+ 
+ 
+diff --git a/src/robo_cortex/core/lifecycle.py b/src/robo_cortex/core/lifecycle.py
+index 754c8fd..b759fb7 100644
+--- a/src/robo_cortex/core/lifecycle.py
++++ b/src/robo_cortex/core/lifecycle.py
+@@ -82,6 +82,9 @@ def change_status(
+         conn.execute("ROLLBACK")
+         raise
+ 
++    if new_status == "active":
++        reverify(conn, repo_root, memory_id)
++
+     return {"id": memory_id, "status": new_status}
+ 
+ 

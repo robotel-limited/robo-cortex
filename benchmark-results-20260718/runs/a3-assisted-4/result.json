@@ -1,0 +1,70 @@
+{
+  "task": "a3",
+  "arm": "assisted",
+  "run": 4,
+  "wall_clock_s": 227.1,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 34.41s",
+  "claude": {
+    "duration_ms": 226389,
+    "duration_api_ms": 119619,
+    "num_turns": 37,
+    "total_cost_usd": 0.20103195000000001,
+    "usage": {
+      "input_tokens": 217,
+      "cache_creation_input_tokens": 35433,
+      "cache_read_input_tokens": 1210827,
+      "output_tokens": 6762,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 35433,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 5,
+          "output_tokens": 393,
+          "cache_read_input_tokens": 42790,
+          "cache_creation_input_tokens": 524,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 524
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 1551,
+        "outputTokens": 16,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.001631,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 217,
+        "outputTokens": 6762,
+        "cacheReadInputTokens": 1210827,
+        "cacheCreationInputTokens": 35433,
+        "webSearchRequests": 0,
+        "costUSD": 0.19940095,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/cli/app.py  | 16 +++++++++++++++-\n src/robo_cortex/core/git.py | 20 ++++++++++++++++++++\n 2 files changed, 35 insertions(+), 1 deletion(-)\n"
+}

@@ -1,0 +1,70 @@
+{
+  "task": "a1",
+  "arm": "baseline",
+  "run": 2,
+  "wall_clock_s": 210.8,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 37.26s",
+  "claude": {
+    "duration_ms": 209884,
+    "duration_api_ms": 60167,
+    "num_turns": 17,
+    "total_cost_usd": 0.10559800000000001,
+    "usage": {
+      "input_tokens": 98,
+      "cache_creation_input_tokens": 30482,
+      "cache_read_input_tokens": 495345,
+      "output_tokens": 3416,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 30482,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 6,
+          "output_tokens": 320,
+          "cache_read_input_tokens": 39057,
+          "cache_creation_input_tokens": 169,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 169
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 688,
+        "outputTokens": 19,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0007830000000000001,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 98,
+        "outputTokens": 3416,
+        "cacheReadInputTokens": 495345,
+        "cacheCreationInputTokens": 30482,
+        "webSearchRequests": 0,
+        "costUSD": 0.104815,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/core/evidence.py  | 1 +\n src/robo_cortex/core/lifecycle.py | 2 ++\n 2 files changed, 3 insertions(+)\n"
+}

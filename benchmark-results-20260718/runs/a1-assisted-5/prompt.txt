@@ -1,0 +1,50 @@
+You are working in the robo-cortex repository: a git-aware, evidence-based memory store for AI coding agents (pure Python, stdlib + SQLite, no external deps). Source in src/robo_cortex/, tests in tests/, design docs in ARCHITECTURE.md.
+
+Bug report from a user: I recorded a memory linked to a file, then edited and committed that file. retrieve correctly flagged the memory as needs_review. I confirmed the lesson still holds and ran `roco status <id> activate`, which exited 0. But the very next retrieve flags the same memory needs_review again, forever. Marking a memory as re-verified seems to have no lasting effect. A related report says evidence-based auto-promotion from provisional to active has the same problem.
+
+The test suite currently has failing tests related to this bug. Reproduce with:
+
+    python3 -m pytest tests/ -q --deselect tests/test_smoke.py::test_version_is_set
+
+Find the root cause and fix it in the source code. Do NOT modify anything under tests/. You are done when the full command above passes with 0 failures.
+
+Prior institutional knowledge retrieved from this project's memory store (robo-cortex retrieve_context output) — it may or may not be relevant:
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "scope": "repo",
+      "type": "lesson",
+      "statement": "When a memory transitions to active \u2014 via 'roco status <id> activate' after a needs_review confirmation, or via evidence-based auto-promotion from provisional \u2014 the store must actually re-capture what 'verified now' means: memory.reverify(conn, repo_root, memory_id) re-reads the current HEAD blob hash of every linked path and bumps last_verified_at. If activation only flips the status column, the next staleness refresh compares against the old stored hash and re-flags needs_review forever.",
+      "why_it_matters": "Without reverify at both call sites (lifecycle.change_status when new_status=='active', and evidence.attach_evidence's auto-promotion), 'I checked, it's still true' records nothing to verify against \u2014 the re-flag loop never breaks.",
+      "status": "active",
+      "confidence": "high",
+      "score": 0.6499999491783248
+    },
+    {
+      "id": 2,
+      "scope": "repo",
+      "type": "lesson",
+      "statement": "Comment-only or whitespace-only edits to .py files must not flag linked memories needs_review. In invalidate._check_path, when the blob hash differs and the path ends in .py, call the token-equivalence check (core/semantic.py: python_source_is_semantically_equivalent) via a helper reading both blobs with blob_content; if equivalent, return status 'reanchored' with the new hash instead of 'changed'. Fail-safe: any decode/tokenize failure degrades to flagging as before.",
+      "why_it_matters": "EVALUATION.md measured 100% spurious needs_review on cosmetic edits; tokenizer comparison (dropping COMMENT/NL, keeping INDENT) is the fix \u2014 git diff -w was rejected because indentation is semantic in Python.",
+      "status": "active",
+      "confidence": "high",
+      "score": 0.29999995023462445
+    }
+  ],
+  "meta": {
+    "matched": 2,
+    "returned": 2,
+    "omitted": [
+      {
+        "reason": "assumptions_gate",
+        "count": 6
+      }
+    ],
+    "needs_review": 0,
+    "contradicted": 0
+  }
+}
+```

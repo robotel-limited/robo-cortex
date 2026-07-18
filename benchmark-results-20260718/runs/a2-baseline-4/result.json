@@ -1,0 +1,70 @@
+{
+  "task": "a2",
+  "arm": "baseline",
+  "run": 4,
+  "wall_clock_s": 197.2,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 34.28s",
+  "claude": {
+    "duration_ms": 196510,
+    "duration_api_ms": 91889,
+    "num_turns": 22,
+    "total_cost_usd": 0.13953310000000002,
+    "usage": {
+      "input_tokens": 129,
+      "cache_creation_input_tokens": 33200,
+      "cache_read_input_tokens": 732511,
+      "output_tokens": 4782,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 33200,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 6,
+          "output_tokens": 492,
+          "cache_read_input_tokens": 41798,
+          "cache_creation_input_tokens": 176,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 176
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 658,
+        "outputTokens": 17,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.000743,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 129,
+        "outputTokens": 4782,
+        "cacheReadInputTokens": 732511,
+        "cacheCreationInputTokens": 33200,
+        "webSearchRequests": 0,
+        "costUSD": 0.13879010000000003,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/core/invalidate.py | 11 +++++++++++\n 1 file changed, 11 insertions(+)\n"
+}

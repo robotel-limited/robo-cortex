@@ -1,0 +1,27 @@
+diff --git a/src/robo_cortex/core/invalidate.py b/src/robo_cortex/core/invalidate.py
+index 249e66d..9b8813a 100644
+--- a/src/robo_cortex/core/invalidate.py
++++ b/src/robo_cortex/core/invalidate.py
+@@ -27,6 +27,22 @@ def _check_path(repo_root, path_to_hash, hash_to_paths, path, stored_hash):
+         current_hash = path_to_hash[path]
+         if current_hash == stored_hash:
+             return {"status": "ok"}
++
++        # For .py files, check semantic equivalence before flagging as changed
++        if path.endswith(".py"):
++            try:
++                from .semantic import python_source_is_semantically_equivalent
++                old_blob = blob_content(repo_root, stored_hash)
++                new_blob = blob_content(repo_root, current_hash)
++                if python_source_is_semantically_equivalent(
++                    old_blob.decode("utf-8"), new_blob.decode("utf-8")
++                ):
++                    return {"status": "reanchored", "new_hash": current_hash}
++            except Exception:
++                # Tokenization failed, syntax error, encoding issue, or any other problem.
++                # Fail-safe: treat as "cannot prove equivalence" and flag for review.
++                pass
++
+         return {"status": "changed", "reason": f"path_changed:{path}"}
+ 
+     candidates = hash_to_paths.get(stored_hash, [])

@@ -1,0 +1,32 @@
+diff --git a/src/robo_cortex/core/invalidate.py b/src/robo_cortex/core/invalidate.py
+index 249e66d..97b6007 100644
+--- a/src/robo_cortex/core/invalidate.py
++++ b/src/robo_cortex/core/invalidate.py
+@@ -12,6 +12,7 @@ from .git import (
+     working_tree_hash,
+ )
+ from .memory import ACTIVE_LIKE_STATUSES, EXCLUDED_STATUSES, get_memory
++from .semantic import python_source_is_semantically_equivalent
+ 
+ STALE_AFTER_DAYS = 180
+ 
+@@ -27,6 +28,19 @@ def _check_path(repo_root, path_to_hash, hash_to_paths, path, stored_hash):
+         current_hash = path_to_hash[path]
+         if current_hash == stored_hash:
+             return {"status": "ok"}
++
++        # For Python files, check if the change is just cosmetic (comments/whitespace)
++        if path.endswith(".py"):
++            try:
++                old_content = blob_content(repo_root, stored_hash).decode("utf-8")
++                new_content = blob_content(repo_root, current_hash).decode("utf-8")
++                if python_source_is_semantically_equivalent(old_content, new_content):
++                    return {"status": "reanchored", "new_hash": current_hash}
++            except Exception:
++                # If anything fails (encoding error, syntax error, etc.),
++                # treat as semantic change and flag for review
++                pass
++
+         return {"status": "changed", "reason": f"path_changed:{path}"}
+ 
+     candidates = hash_to_paths.get(stored_hash, [])

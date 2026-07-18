@@ -1,0 +1,70 @@
+{
+  "task": "a2",
+  "arm": "baseline",
+  "run": 1,
+  "wall_clock_s": 174.5,
+  "acceptance_pass": true,
+  "acceptance_summary": "262 passed, 1 deselected in 36.98s",
+  "claude": {
+    "duration_ms": 173717,
+    "duration_api_ms": 61689,
+    "num_turns": 18,
+    "total_cost_usd": 0.1108911,
+    "usage": {
+      "input_tokens": 107,
+      "cache_creation_input_tokens": 30304,
+      "cache_read_input_tokens": 537711,
+      "output_tokens": 3677,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 30304,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 6,
+          "output_tokens": 434,
+          "cache_read_input_tokens": 38917,
+          "cache_creation_input_tokens": 161,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 161
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 658,
+        "outputTokens": 18,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.000748,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+        "inputTokens": 107,
+        "outputTokens": 3677,
+        "cacheReadInputTokens": 537711,
+        "cacheCreationInputTokens": 30304,
+        "webSearchRequests": 0,
+        "costUSD": 0.11014310000000001,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "is_error": false,
+    "subtype": "success",
+    "terminal_reason": "completed"
+  },
+  "diff_stat": " src/robo_cortex/core/invalidate.py | 14 ++++++++++++++\n 1 file changed, 14 insertions(+)\n"
+}

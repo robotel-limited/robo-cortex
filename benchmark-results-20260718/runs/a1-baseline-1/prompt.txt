@@ -1,0 +1,9 @@
+You are working in the robo-cortex repository: a git-aware, evidence-based memory store for AI coding agents (pure Python, stdlib + SQLite, no external deps). Source in src/robo_cortex/, tests in tests/, design docs in ARCHITECTURE.md.
+
+Bug report from a user: I recorded a memory linked to a file, then edited and committed that file. retrieve correctly flagged the memory as needs_review. I confirmed the lesson still holds and ran `roco status <id> activate`, which exited 0. But the very next retrieve flags the same memory needs_review again, forever. Marking a memory as re-verified seems to have no lasting effect. A related report says evidence-based auto-promotion from provisional to active has the same problem.
+
+The test suite currently has failing tests related to this bug. Reproduce with:
+
+    python3 -m pytest tests/ -q --deselect tests/test_smoke.py::test_version_is_set
+
+Find the root cause and fix it in the source code. Do NOT modify anything under tests/. You are done when the full command above passes with 0 failures.
