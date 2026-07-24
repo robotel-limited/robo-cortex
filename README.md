@@ -6,6 +6,7 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/robo-cortex.svg)](https://pypi.org/project/robo-cortex/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Smithery Calls](https://smithery.ai/badge/robotel-top/robo-cortex)](https://smithery.ai/servers/robotel-top/robo-cortex)
+[![robo-cortex MCP server](https://glama.ai/mcp/servers/robotel-limited/robo-cortex/badges/card.svg)](https://glama.ai/mcp/servers/robotel-limited/robo-cortex)
 
 **Git-aware knowledge integrity for AI coding agents.**
 
