@@ -26,7 +26,10 @@ description and dropped the prompt-injection framing below. Caught by
 testing the actual mechanism before relying on it, not by inspection.
 """
 
+from typing import Annotated
+
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 
 from .core.errors import NotFoundError
 from .core.evidence import attach_evidence as core_attach_evidence
@@ -84,6 +87,20 @@ _VERIFY_EVIDENCE_DESCRIPTION = (
     "allowed to make a network call (Gitea-backed evidence only, and only "
     "when this is called). `scope` disambiguates an evidence_id that "
     "collides between the repo and global stores. " + _COMMAND_IS_DATA
+)
+_LIST_AFFECTED_DESCRIPTION = (
+    "Report which stored memories a git diff puts at risk because it touches "
+    "a code file they are anchored to -- the proactive half of invalidation. "
+    'Returns {"data": [{"id", "statement", "reason"}], "matched": N}; each '
+    "`reason` names the offending path and diff source, e.g. "
+    "`path_changed:src/scanner.py@working_tree`. Terminal-status memories "
+    "(superseded/invalidated/abandoned/archived) are excluded -- already "
+    "history. Use it when you are about to change, or have just changed, code "
+    "and want to know which memories that change endangers: it is "
+    "diff-driven, mapping a code delta to the memories that depend on it -- "
+    "unlike retrieve_context (natural-language task -> context pack) and "
+    "search_memory (keyword query). Runs the staleness refresh first, so "
+    "drift already committed is flagged before the diff-scoped report."
 )
 
 
@@ -221,18 +238,39 @@ def build_server(repo_arg: str | None = None) -> FastMCP:
             status=status, limit=limit, global_conn=global_conn,
         )
 
-    @server.tool(name="list_affected")
+    @server.tool(name="list_affected", description=_LIST_AFFECTED_DESCRIPTION)
     def list_affected_tool(
-        diff_range: str | None = None,
-        staged: bool = False,
-        working: bool = False,
+        diff_range: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Optional committed range in git syntax, e.g. 'HEAD~3..HEAD'. "
+                    "Memories are compared against the range's end content. Takes "
+                    "precedence over `staged`/`working` if more than one is given."
+                )
+            ),
+        ] = None,
+        staged: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Inspect only staged changes (`git diff --cached`). "
+                    "Ignored if `diff_range` is set."
+                )
+            ),
+        ] = False,
+        working: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Inspect only unstaged working-tree changes (`git diff`). "
+                    "Ignored if `diff_range` is set. When `diff_range`, `staged`, "
+                    "and `working` are all omitted, staged and unstaged changes are "
+                    "inspected together (`git diff HEAD`)."
+                )
+            ),
+        ] = False,
     ) -> dict:
-        """What does a diff put at risk -- the proactive half of
-        invalidation. Default (all omitted): working tree + staged combined.
-        Runs the staleness refresh first, so anything already committed
-        since the last check is flagged/healed for real before the
-        diff-scoped report is computed.
-        """
         return core_affected(
             local_conn, repo_root, diff_range=diff_range, staged=staged, working=working
         )

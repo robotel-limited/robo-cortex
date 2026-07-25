@@ -324,6 +324,14 @@ more, capped by limit" from "there just weren't more" via this field alone.
 **Purpose:** what does a diff put at risk — the proactive half of
 invalidation, for use before or right after making a change.
 
+**When to use this and not the other read tools:** `list_affected` is
+diff-driven. Reach for it when you are about to change, or have just changed,
+code and want to know which memories that change endangers — it maps a code
+delta to the memories anchored to the touched paths. Contrast:
+`retrieve_context` takes a natural-language task and builds a ranked
+working-context pack; `search_memory` takes a keyword query. `list_affected`
+does neither — it neither builds context nor searches by text.
+
 **Inputs:**
 ```json
 {

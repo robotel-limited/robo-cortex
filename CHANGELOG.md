@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-07-26
+
+### Changed
+
+- **`list_affected` MCP tool documentation.** Gave the tool a full `description=` (matching the other high-value tools) and per-parameter `Field` descriptions for `diff_range`/`staged`/`working`. The description now states concretely what the tool returns, excludes terminal-status memories, and — most importantly — spells out *when* to reach for it versus `retrieve_context` and `search_memory` (it is diff-driven, mapping a code delta to the memories that depend on it, not a task- or keyword-driven read). Documentation only; no behavior change. Raises the tool's Glama quality-score dimensions (behavior, completeness, parameters, purpose, usage guidelines).
+
 ## [0.4.1] — 2026-07-15
 
 Adds the `mcp-name` ownership-verification marker to the README, required to publish robo-cortex to the official MCP Registry (registry.modelcontextprotocol.io). No functional changes.
