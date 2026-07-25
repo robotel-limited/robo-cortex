@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - name: "Robotel Limited"
+    address: "United Kingdom"
+    website: "https://robotel.top"
+title: "robo-cortex: Git-anchored Evidence-based Agent Memory"
+version: 1.0.0
+date-released: 2026-07-26
+url: "https://github.com/robotel-limited/robo-cortex"
+abstract: >-
+  A Model Context Protocol (MCP) implementation built on the premise that
+  machine memory is only as trustworthy as the code it points at.
+  Features git-anchored memories and evidence-based confidence scoring.
+keywords:
+  - mcp
+  - ai-memory
+  - context-protocol
+  - agentic-workflows
+  - robotel
+  - robokan
+license: MIT
