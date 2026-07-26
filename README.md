@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Smithery Calls](https://smithery.ai/badge/robotel-top/robo-cortex)](https://smithery.ai/servers/robotel-top/robo-cortex)
 [![robo-cortex MCP server](https://glama.ai/mcp/servers/robotel-limited/robo-cortex/badges/score.svg)](https://glama.ai/mcp/servers/robotel-limited/robo-cortex)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21610869.svg)](https://doi.org/10.5281/zenodo.21610869)
 
 [![robo-cortex MCP server](https://glama.ai/mcp/servers/robotel-limited/robo-cortex/badges/card.svg)](https://glama.ai/mcp/servers/robotel-limited/robo-cortex)
 
