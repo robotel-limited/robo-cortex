@@ -1,22 +1,41 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
-authors:
-  - name: "Robotel Limited"
-    address: "United Kingdom"
-    website: "https://robotel.top"
-title: "robo-cortex: Git-anchored Evidence-based Agent Memory"
-version: 1.0.0
-date-released: 2026-07-26
-url: "https://github.com/robotel-limited/robo-cortex"
+message: "If you use robo-cortex in your work, please cite the paper below."
+title: "robo-cortex"
 abstract: >-
-  A Model Context Protocol (MCP) implementation built on the premise that
-  machine memory is only as trustworthy as the code it points at.
-  Features git-anchored memories and evidence-based confidence scoring.
+  A local-first memory store for AI coding agents, built on the premise that
+  machine memory is only as trustworthy as the code it points at. Memories are
+  anchored to git blob hashes, so when the linked code changes they are
+  automatically flagged for review instead of being silently trusted or lost;
+  confidence is evidence-based. No embeddings, no vector database, no cloud —
+  standard-library Python over SQLite, exposed via a CLI, a Python SDK, and
+  eight Model Context Protocol (MCP) tools.
+authors:
+  - family-names: "Neagu"
+    given-names: "Sorin"
+    orcid: "https://orcid.org/0009-0004-2127-4737"
+    affiliation: "Robotel Limited"
+version: "0.4.2"
+date-released: "2026-07-26"
+url: "https://github.com/robotel-limited/robo-cortex"
+repository-code: "https://github.com/robotel-limited/robo-cortex"
+license: MIT
 keywords:
   - mcp
   - ai-memory
   - context-protocol
   - agentic-workflows
+  - knowledge-integrity
   - robotel
-  - robokan
-license: MIT
+preferred-citation:
+  type: article
+  title: "robo-cortex: Git-Anchored, Evidence-Based Memory for AI Coding Agents"
+  authors:
+    - family-names: "Neagu"
+      given-names: "Sorin"
+      orcid: "https://orcid.org/0009-0004-2127-4737"
+      affiliation: "Robotel Limited"
+  year: 2026
+  doi: "10.5281/zenodo.21610870"
+  url: "https://doi.org/10.5281/zenodo.21610870"
+  publisher:
+    name: "Zenodo"
