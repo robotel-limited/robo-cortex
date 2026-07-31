@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from . import db as dbmod
-from .errors import NotFoundError, ValidationError
+from .errors import AmbiguousIdError, NotFoundError, ValidationError
 from .git import blob_hash_at_head
 from .text import fts_query_string, tokenize_without_stopwords
 
@@ -289,12 +289,15 @@ def find_memory_store(local_conn, global_conn, memory_id: int, scope: str | None
     proven live: a local id 1 makes global id 1 unreachable by id from that
     repo without a way to say which store you mean.
 
-    `scope=None` (default): try local first, global second -- local wins by
-    convention (`--repo` is the primary context of a CLI/MCP invocation),
-    NotFoundError only if neither has it. `scope='repo'` / `scope='global'`:
-    look only in that store, no fallback -- the explicit disambiguator for
-    when the caller already knows which memory they mean and a same-id
-    collision would otherwise resolve to the wrong one.
+    `scope=None` (default): look in both stores. Exactly one hit resolves
+    unambiguously. Both hit -> AmbiguousIdError instead of silently picking
+    one -- an earlier version silently preferred local here, which is what
+    let `roco status 10 activate` flip an unrelated repo-scoped memory
+    instead of the intended global one, live, with no error and no
+    indication anything had gone wrong (see prompt-bug-roco.md). Neither
+    hit -> NotFoundError. `scope='repo'` / `scope='global'`: look only in
+    that store, no fallback -- the explicit disambiguator for when the
+    caller already knows which memory they mean.
 
     Used by every ID-taking command (`show`, `status`, `evidence
     add/verify`, `link`) so a scope='global' memory recorded once is still
@@ -309,15 +312,27 @@ def find_memory_store(local_conn, global_conn, memory_id: int, scope: str | None
         get_memory(global_conn, memory_id)
         return global_conn
 
-    try:
-        get_memory(local_conn, memory_id)
+    local_hit = _has_memory(local_conn, memory_id)
+    global_hit = global_conn is not None and _has_memory(global_conn, memory_id)
+
+    if local_hit and global_hit:
+        raise AmbiguousIdError(
+            f"id {memory_id} exists in both repo and global stores -- "
+            "pass --scope repo or --scope global to disambiguate"
+        )
+    if local_hit:
         return local_conn
-    except NotFoundError:
-        pass
-    if global_conn is not None:
-        get_memory(global_conn, memory_id)  # raises NotFoundError if absent there too
+    if global_hit:
         return global_conn
     raise NotFoundError(f"no memory with id {memory_id}")
+
+
+def _has_memory(conn, memory_id: int) -> bool:
+    try:
+        get_memory(conn, memory_id)
+        return True
+    except NotFoundError:
+        return False
 
 
 def reverify(conn, repo_root: Path, memory_id: int) -> None:

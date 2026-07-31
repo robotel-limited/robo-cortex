@@ -1,4 +1,6 @@
 import json
+import os
+import sqlite3
 import subprocess
 import sys
 
@@ -104,12 +106,14 @@ def test_cli_explain_human_readable_output_on_global_item_does_not_crash(tmp_pat
     assert _run_cli("init", "--repo", str(repo_a)).returncode == 0
     assert _run_cli("init", "--repo", str(repo_b)).returncode == 0
 
-    assert _run_cli(
+    record_result = _run_cli(
         "record", "--repo", str(repo_a),
         "--type", "lesson", "--scope", "global", "--confidence", "high",
         "--statement", "Prefer SQLite over Postgres for local-first single-user tools.",
         "--assumptions", "single-user, local-first",
-    ).returncode == 0
+        "--json",
+    )
+    assert record_result.returncode == 0
 
     retrieve_result = _run_cli(
         "retrieve", "--repo", str(repo_b),
@@ -120,7 +124,7 @@ def test_cli_explain_human_readable_output_on_global_item_does_not_crash(tmp_pat
     assert "assumptions_gate=" in retrieve_result.stdout
     assert "passed=True" in retrieve_result.stdout
 
-    memory_id = 1
+    memory_id = json.loads(record_result.stdout)["id"]
     show_result = _run_cli(
         "show", str(memory_id), "--repo", str(repo_b),
         "--explain-against", "database choice for a single-user local-first tool",
@@ -129,9 +133,11 @@ def test_cli_explain_human_readable_output_on_global_item_does_not_crash(tmp_pat
     assert "assumptions_gate=" in show_result.stdout
 
 
-def test_cli_scope_disambiguates_a_colliding_id(tmp_path):
-    """Proven live: a local id 1 shadows global id 1 for show/status/
-    evidence without a way to say which store is meant. --scope fixes it."""
+def test_cli_new_global_ids_no_longer_collide_with_repo_ids(tmp_path):
+    """Structural half of the id-collision fix (prompt-bug-roco.md option
+    3): the global store's ids are now partitioned into a high range, so a
+    freshly recorded global memory no longer collides with a repo-local id
+    -- `show` resolves either one correctly with no --scope needed."""
     repo_a = build_fixture_repo_a(tmp_path / "a")
     assert _run_cli("init", "--repo", str(repo_a)).returncode == 0
 
@@ -148,11 +154,52 @@ def test_cli_scope_disambiguates_a_colliding_id(tmp_path):
     )
     local_id = json.loads(local_record.stdout)["id"]
     global_id = json.loads(global_record.stdout)["id"]
+    assert local_id != global_id
+
+    local_show = _run_cli("show", str(local_id), "--repo", str(repo_a), "--json")
+    global_show = _run_cli("show", str(global_id), "--repo", str(repo_a), "--json")
+    assert json.loads(local_show.stdout)["statement"] == "a local fact"
+    assert json.loads(global_show.stdout)["statement"] == "a global lesson"
+
+
+def test_cli_scope_disambiguates_a_legacy_colliding_id(tmp_path):
+    """Proven live (prompt-bug-roco.md): before the id-floor fix, a local
+    id could shadow a global id of the same number for show/status/evidence
+    with no way to say which store is meant. New installs no longer produce
+    this (ids are partitioned apart, re-enforced on every open -- resetting
+    the sequence between CLI invocations wouldn't stick), but rows already
+    assigned a low id before the floor existed still can collide forever
+    (the floor never renumbers existing rows). Simulated here by inserting
+    a global row directly with an explicit low id, bypassing the sequence
+    the same way pre-fix on-disk data would sit. Bare `show` must now
+    refuse instead of silently shadowing; --scope still reaches each one."""
+    repo_a = build_fixture_repo_a(tmp_path / "a")
+    assert _run_cli("init", "--repo", str(repo_a)).returncode == 0
+    assert _run_cli("init", "--repo", str(repo_a), "--global").returncode == 0
+
+    local_record = _run_cli(
+        "record", "--repo", str(repo_a),
+        "--type", "fact", "--scope", "repo", "--confidence", "low",
+        "--statement", "a local fact", "--json",
+    )
+    local_id = json.loads(local_record.stdout)["id"]
+
+    global_db_path = os.environ["ROBO_CORTEX_GLOBAL_DB"]
+    global_conn = sqlite3.connect(global_db_path)
+    global_conn.execute(
+        "INSERT INTO memory (id, type, scope, statement, assumptions, confidence) "
+        "VALUES (?, 'lesson', 'global', 'a global lesson', 'single-user', 'high')",
+        (local_id,),
+    )
+    global_conn.commit()
+    global_conn.close()
+    global_id = local_id
     assert local_id == global_id  # the collision this test is about
 
-    # without disambiguation, the local one shadows the global one
-    default_show = _run_cli("show", str(local_id), "--repo", str(repo_a), "--json")
-    assert json.loads(default_show.stdout)["statement"] == "a local fact"
+    # without disambiguation, the ambiguous id is refused, not silently guessed
+    default_show = _run_cli("show", str(local_id), "--repo", str(repo_a))
+    assert default_show.returncode != 0
+    assert "exists in both repo and global stores" in default_show.stderr
 
     # --scope reaches each one unambiguously
     repo_show = _run_cli("show", str(local_id), "--repo", str(repo_a), "--scope", "repo", "--json")

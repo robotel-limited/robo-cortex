@@ -5,7 +5,7 @@
 import pytest
 
 from robo_cortex.core.db import connect, migrate
-from robo_cortex.core.errors import NotFoundError, ValidationError
+from robo_cortex.core.errors import AmbiguousIdError, NotFoundError, ValidationError
 from robo_cortex.core.memory import find_memory_store, get_memory, list_memories, record_memory
 from robo_cortex.core.retrieve import retrieve_context, search_memory
 from robo_cortex.core.store import open_global_store
@@ -212,45 +212,55 @@ def test_find_memory_store_falls_back_to_global_when_absent_locally(tmp_path):
         find_memory_store(local_conn_a, global_conn, 999999)
 
 
-def test_find_memory_store_prefers_local_on_id_collision(tmp_path):
-    """Both stores are independent autoincrement sequences and both start
-    at 1, so the same id can legitimately refer to two different memories.
-    Documented resolution order: local wins."""
+def test_find_memory_store_raises_ambiguous_on_id_collision(tmp_path):
+    """Both stores are independent autoincrement sequences, so the same id
+    can legitimately refer to two different memories -- proven live
+    (prompt-bug-roco.md): silently preferring local here let `roco status
+    10 activate` flip an unrelated repo memory instead of the intended
+    global one, with no error and no indication anything was wrong.
+    scope=None must now refuse instead of guessing."""
     repo_a, local_conn_a = _repo_a(tmp_path)
     global_conn = open_global_store()
 
     local_result = record_memory(
         local_conn_a, repo_a, type="fact", scope="repo", confidence="low", statement="local fact",
     )
+    # the id-floor fix (store.py) stops *new* global ids from colliding with
+    # repo-local ones -- force the pre-fix scenario (ids assigned before the
+    # floor existed) by resetting the global sequence back down, since that
+    # residual case is exactly what AmbiguousIdError still needs to catch.
+    global_conn.execute("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'memory'")
     global_result = record_memory(
         global_conn, repo_a, type="lesson", scope="global", confidence="high",
         statement="global lesson", assumptions="single-user",
     )
     assert local_result["id"] == global_result["id"]  # the collision this test is about
 
-    resolved = find_memory_store(local_conn_a, global_conn, local_result["id"])
-    assert resolved is local_conn_a
-    assert get_memory(resolved, local_result["id"])["statement"] == "local fact"
+    with pytest.raises(AmbiguousIdError, match="exists in both repo and global stores"):
+        find_memory_store(local_conn_a, global_conn, local_result["id"])
 
 
-def test_find_memory_store_explicit_scope_reaches_the_shadowed_global_memory(tmp_path):
-    """Proven live: without a disambiguator, a colliding local id 1 makes
-    global id 1 completely unreachable by id. --scope='global' (surfaced in
-    the CLI and, per Gate B follow-up, as an MCP tool input) is the fix."""
+def test_find_memory_store_explicit_scope_reaches_either_side_of_a_collision(tmp_path):
+    """Proven live: without a disambiguator, a colliding id is ambiguous
+    between stores. --scope='repo'/'global' (surfaced in the CLI and, per
+    Gate B follow-up, as an MCP tool input) reaches each one unambiguously."""
     repo_a, local_conn_a = _repo_a(tmp_path)
     global_conn = open_global_store()
 
     local_result = record_memory(
         local_conn_a, repo_a, type="fact", scope="repo", confidence="low", statement="local fact",
     )
+    # force a pre-id-floor-style collision -- see comment above
+    global_conn.execute("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'memory'")
     global_result = record_memory(
         global_conn, repo_a, type="lesson", scope="global", confidence="high",
         statement="global lesson", assumptions="single-user",
     )
     assert local_result["id"] == global_result["id"]
 
-    # default (no scope) still shadows the global one -- documented, not a bug
-    assert find_memory_store(local_conn_a, global_conn, local_result["id"]) is local_conn_a
+    # default (no scope) is ambiguous and must be refused, not silently guessed
+    with pytest.raises(AmbiguousIdError):
+        find_memory_store(local_conn_a, global_conn, local_result["id"])
 
     # explicit scope reaches each one unambiguously
     local_store = find_memory_store(local_conn_a, global_conn, local_result["id"], scope="repo")
@@ -269,3 +279,48 @@ def test_find_memory_store_explicit_scope_raises_not_found_if_wrong(tmp_path):
 
     with pytest.raises(NotFoundError):
         find_memory_store(local_conn_a, global_conn, local_result["id"], scope="global")
+
+
+def test_global_store_ids_are_partitioned_above_repo_ids(tmp_path):
+    """Structural half of the id-collision fix (prompt-bug-roco.md option
+    3): new global memories start far above any realistic repo-local id, so
+    future recordings can no longer collide by construction -- unlike the
+    AmbiguousIdError guard, which only catches a collision after it exists."""
+    from robo_cortex.core.store import GLOBAL_ID_FLOOR
+
+    repo_a, local_conn_a = _repo_a(tmp_path)
+    global_conn = open_global_store()
+
+    local_result = record_memory(
+        local_conn_a, repo_a, type="fact", scope="repo", confidence="low", statement="local fact",
+    )
+    global_result = record_memory(
+        global_conn, repo_a, type="lesson", scope="global", confidence="high",
+        statement="global lesson", assumptions="single-user",
+    )
+
+    assert local_result["id"] < GLOBAL_ID_FLOOR
+    assert global_result["id"] >= GLOBAL_ID_FLOOR
+    assert local_result["id"] != global_result["id"]
+
+    # unambiguous by construction now -- no --scope needed
+    resolved = find_memory_store(local_conn_a, global_conn, global_result["id"])
+    assert resolved is global_conn
+
+
+def test_global_store_id_floor_does_not_renumber_existing_rows(tmp_path):
+    """The floor only pushes the *next* id up; it must never touch ids
+    already assigned (that would break memory_link/evidence FK references,
+    and any external reference to a memory by id)."""
+    repo_a, local_conn_a = _repo_a(tmp_path)
+    global_conn = open_global_store()
+
+    first = record_memory(
+        global_conn, repo_a, type="lesson", scope="global", confidence="high",
+        statement="first global lesson", assumptions="single-user",
+    )
+    global_conn.close()
+
+    # simulate a second process/CLI invocation re-opening the same store
+    reopened = open_global_store()
+    assert get_memory(reopened, first["id"])["statement"] == "first global lesson"

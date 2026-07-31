@@ -28,5 +28,9 @@ class NotFoundError(RoboCortexError):
     exit_code = 1
 
 
+class AmbiguousIdError(RoboCortexError):
+    exit_code = 1
+
+
 class IllegalTransitionError(RoboCortexError):
     exit_code = 1

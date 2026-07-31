@@ -32,6 +32,21 @@ def open_store(repo_arg: str | None) -> tuple[Path, sqlite3.Connection]:
 GLOBAL_DIR = Path.home() / ".cortex"
 GLOBAL_DB_FILENAME = "global.db"
 
+# Repo-local stores and the global store share one schema/migration chain,
+# so each starts its own autoincrement id sequence at 1 -- meaning a repo
+# memory #10 and a global memory #10 can (and did, live) coexist and refer
+# to unrelated rows, with nothing to disambiguate a bare id between them
+# (see prompt-bug-roco.md). Reserving this range for the global store makes
+# new collisions structurally impossible: no realistic single-user repo
+# will ever record a billion memories. This only pushes future ids in the
+# global store's autoincrement tables above the floor -- it never touches
+# already-assigned ids (that would renumber existing memory/evidence rows
+# out from under their own FK references and any external reference to
+# those ids), so ids assigned before this fix shipped can still collide;
+# `find_memory_store`'s AmbiguousIdError is what catches those.
+GLOBAL_ID_FLOOR = 1_000_000_000
+_GLOBAL_AUTOINCREMENT_TABLES = ("memory", "evidence", "memory_link", "cold_storage")
+
 # Override for tests (and any user who wants a non-default location): a full
 # path to the global db file. Without this, every test process would read
 # and write the *real* ~/.cortex/global.db on whatever machine runs the
@@ -69,4 +84,27 @@ def open_global_store() -> sqlite3.Connection | None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = connect(db_path)
     migrate(conn)
+    _ensure_global_id_floor(conn)
     return conn
+
+
+def _ensure_global_id_floor(conn: sqlite3.Connection) -> None:
+    """Bump each autoincrement table's next id up to GLOBAL_ID_FLOOR if it
+    isn't already past it. Idempotent (only ever raises seq, never lowers
+    it) and a no-op once the floor has been crossed, so it's cheap to call
+    on every open rather than needing a one-time migration step.
+    """
+    for table in _GLOBAL_AUTOINCREMENT_TABLES:
+        row = conn.execute(
+            "SELECT seq FROM sqlite_sequence WHERE name = ?", (table,)
+        ).fetchone()
+        if row is None:
+            conn.execute(
+                "INSERT INTO sqlite_sequence (name, seq) VALUES (?, ?)",
+                (table, GLOBAL_ID_FLOOR),
+            )
+        elif row[0] < GLOBAL_ID_FLOOR:
+            conn.execute(
+                "UPDATE sqlite_sequence SET seq = ? WHERE name = ?",
+                (GLOBAL_ID_FLOOR, table),
+            )

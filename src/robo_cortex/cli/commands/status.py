@@ -39,15 +39,16 @@ def run(args) -> int:
 
         new_status = STATUS_ACTIONS[args.action]
         store = find_memory_store(conn, global_conn, args.id, scope=args.scope)
+        resolved_scope = "global" if store is global_conn else "repo"
         result = change_status(
             store, repo_root, args.id, new_status, args.reason,
             supersedes_link_to=args.supersedes,
         )
 
     if args.json:
-        print(json.dumps(result))
+        print(json.dumps({**result, "scope": resolved_scope}))
     else:
-        print(f"Memory {result['id']} -> {result['status']}")
+        print(f"Memory {result['id']} ({resolved_scope}) -> {result['status']}")
     return 0
 
 

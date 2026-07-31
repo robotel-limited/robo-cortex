@@ -6,6 +6,7 @@ JSON-RPC, same as the stdout-purity tests.
 
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 
@@ -303,10 +304,14 @@ def test_verify_evidence_gitea_backed_degrades_gracefully(tmp_path):
     assert result["reason"] == "gitea_not_configured"
 
 
-def test_scope_disambiguator_reaches_shadowed_global_memory(tmp_path):
+def test_scope_disambiguator_reaches_a_legacy_colliding_memory(tmp_path):
     """The second pre-Stage-9 fix, verified all the way through the MCP
-    layer: a local id 1 shadows global id 1 by default; scope='global'
-    reaches the intended memory."""
+    layer. A fresh global id no longer collides with a repo-local one at all
+    (store.py's id-floor partitioning) -- forced here by resetting the
+    global sequence back down, the way pre-fix on-disk data would look, so
+    this still exercises the collision path. Bare get_memory on the
+    ambiguous id must now fail instead of silently shadowing to local;
+    scope='repo'/'global' still reach each one."""
     repo = build_fixture_repo_a(tmp_path)
     _init(repo)
 
@@ -314,18 +319,30 @@ def test_scope_disambiguator_reaches_shadowed_global_memory(tmp_path):
         local_result = await _call(session, "record_memory", {
             "type": "fact", "scope": "repo", "confidence": "low", "statement": "a local fact",
         })
+
+        global_db_path = os.environ["ROBO_CORTEX_GLOBAL_DB"]
+        global_conn = sqlite3.connect(global_db_path)
+        global_conn.execute(
+            "UPDATE sqlite_sequence SET seq = ? WHERE name = 'memory'",
+            (local_result["id"] - 1,),
+        )
+        global_conn.commit()
+        global_conn.close()
+
         global_result = await _call(session, "record_memory", {
             "type": "lesson", "scope": "global", "confidence": "high",
             "statement": "a global lesson", "assumptions": "single-user",
         })
-        assert local_result["id"] == global_result["id"]
+        assert local_result["id"] == global_result["id"]  # the collision this test is about
 
-        default_fetch = await _call(session, "get_memory", {"memory_id": local_result["id"]})
+        default_error = await _call_expect_error(
+            session, "get_memory", {"memory_id": local_result["id"]}
+        )
         repo_fetch = await _call(session, "get_memory", {"memory_id": local_result["id"], "scope": "repo"})
         global_fetch = await _call(session, "get_memory", {"memory_id": global_result["id"], "scope": "global"})
-        return default_fetch, repo_fetch, global_fetch
+        return default_error, repo_fetch, global_fetch
 
-    default_fetch, repo_fetch, global_fetch = run_scenario(repo, scenario)
-    assert default_fetch["statement"] == "a local fact"  # default shadows to local
+    default_error, repo_fetch, global_fetch = run_scenario(repo, scenario)
+    assert "exists in both repo and global stores" in default_error
     assert repo_fetch["statement"] == "a local fact"
     assert global_fetch["statement"] == "a global lesson"

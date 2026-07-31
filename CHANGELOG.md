@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.4.3] — 2026-07-31
+
+### Fixed
+
+- **Silent wrong-store mutation on id collision.** Repo-local and global stores are independent autoincrement sequences, so a repo memory and a global memory can share the same numeric id. `roco status`/`link`/`evidence verify` (and the SDK/MCP equivalents), when called without `--scope`, used to silently pick whichever store hit first (local, by convention) — so e.g. `roco status 10 activate` could flip the wrong, unrelated memory to `active` with no error and no indication anything was off. `find_memory_store`/the new `find_evidence_store` now detect the collision and raise a clear `id N exists in both repo and global stores -- pass --scope repo or --scope global to disambiguate` error instead of guessing. `status`/`link` also now echo which store they acted on (`Memory 10 (global) -> active`) so a resolved-but-unintended target is visible immediately. Found live during normal usage.
+
+### Added
+
+- **Global store id partitioning.** New global memories/evidence/links now start at id 1,000,000,000+ (bumped in place, no renumbering of existing rows) so future ids can no longer collide with any repo-local store's ids — the same bug class above, closed structurally going forward. Ids assigned before this change can still collide with existing repo-local ids; the collision-detection fix above is what catches those.
+
 ## [0.4.2] — 2026-07-26
 
 ### Changed

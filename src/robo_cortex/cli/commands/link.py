@@ -21,12 +21,16 @@ def run(args) -> int:
                 file=sys.stderr,
             )
             return 1
+        resolved_scope = "global" if store1 is global_conn else "repo"
         result = create_link(store1, args.id1, args.id2, link_type)
 
     if args.json:
-        print(json.dumps(result))
+        print(json.dumps({**result, "scope": resolved_scope}))
     else:
-        print(f"Linked {result['from_id']} --{result['link_type']}--> {result['to_id']}")
+        print(
+            f"Linked {result['from_id']} --{result['link_type']}--> "
+            f"{result['to_id']} ({resolved_scope})"
+        )
     return 0
 
 

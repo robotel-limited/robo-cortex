@@ -1,9 +1,15 @@
 import pytest
 
 from robo_cortex.core.db import connect, migrate
-from robo_cortex.core.errors import NotFoundError, ValidationError
-from robo_cortex.core.evidence import attach_evidence, evidence_strength, verify_evidence
+from robo_cortex.core.errors import AmbiguousIdError, NotFoundError, ValidationError
+from robo_cortex.core.evidence import (
+    attach_evidence,
+    evidence_strength,
+    find_evidence_store,
+    verify_evidence,
+)
 from robo_cortex.core.memory import get_memory, record_memory
+from robo_cortex.core.store import open_global_store
 
 from .fixtures import build_fixture_repo_a
 
@@ -131,3 +137,42 @@ def test_verify_evidence_rejects_unknown_id(tmp_path):
     _repo, conn = _store(tmp_path)
     with pytest.raises(NotFoundError):
         verify_evidence(conn, 9999)
+
+
+def test_find_evidence_store_raises_ambiguous_on_id_collision(tmp_path):
+    """Evidence ids are a per-store autoincrement sequence too -- same
+    shape as the memory-id collision (prompt-bug-roco.md), just not routed
+    through find_memory_store since evidence rows aren't memories. The
+    store.py id-floor fix stops *new* collisions, but ids assigned before
+    that floor existed can still collide; simulated here by resetting the
+    global store's evidence sequence back down, the way pre-fix on-disk
+    data would look."""
+    repo, local_conn = _store(tmp_path)
+    global_conn = open_global_store()
+
+    local_result = record_memory(local_conn, repo, type="fact", scope="repo", statement="x", confidence="low")
+    local_evidence = attach_evidence(
+        local_conn, repo, local_result["id"], kind="free_text", description="local evidence",
+    )
+
+    global_conn.execute("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'evidence'")
+    global_result = record_memory(
+        global_conn, repo, type="lesson", scope="global", confidence="high",
+        statement="global lesson", assumptions="single-user",
+    )
+    global_evidence = attach_evidence(
+        global_conn, repo, global_result["id"], kind="free_text", description="global evidence",
+    )
+
+    assert local_evidence["evidence_id"] == global_evidence["evidence_id"]  # the collision this test is about
+
+    with pytest.raises(AmbiguousIdError, match="exists in both repo and global stores"):
+        find_evidence_store(local_conn, global_conn, local_evidence["evidence_id"])
+
+    # explicit scope reaches each one unambiguously
+    assert find_evidence_store(
+        local_conn, global_conn, local_evidence["evidence_id"], scope="repo"
+    ) is local_conn
+    assert find_evidence_store(
+        local_conn, global_conn, global_evidence["evidence_id"], scope="global"
+    ) is global_conn

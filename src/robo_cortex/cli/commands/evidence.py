@@ -3,8 +3,12 @@
 import json
 import sys
 
-from robo_cortex.core.errors import NotFoundError, RoboCortexError
-from robo_cortex.core.evidence import EVIDENCE_KINDS, attach_evidence, verify_evidence
+from robo_cortex.core.evidence import (
+    EVIDENCE_KINDS,
+    attach_evidence,
+    find_evidence_store,
+    verify_evidence,
+)
 from robo_cortex.core.memory import find_memory_store
 from robo_cortex.cli._common import _get_cmd_name, _store, _global_store, cli_command
 
@@ -45,15 +49,8 @@ def run_verify(args) -> int:
         # lives in: it's this invocation's ambient repo context, used to
         # resolve the Gitea owner/repo via the local git remote
         # (Stage 10) for gitea_pr/gitea_issue evidence specifically.
-        if args.scope == "repo":
-            result = verify_evidence(conn, args.evidence_id, repo_root)
-        elif args.scope == "global":
-            result = verify_evidence(global_conn, args.evidence_id, repo_root)
-        else:
-            try:
-                result = verify_evidence(conn, args.evidence_id, repo_root)
-            except NotFoundError:
-                result = verify_evidence(global_conn, args.evidence_id, repo_root)
+        store = find_evidence_store(conn, global_conn, args.evidence_id, scope=args.scope)
+        result = verify_evidence(store, args.evidence_id, repo_root)
 
     print(json.dumps(result) if args.json else json.dumps(result, indent=2))
     return 0

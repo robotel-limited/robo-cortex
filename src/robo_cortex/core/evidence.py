@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from .errors import NotFoundError, ValidationError
+from .errors import AmbiguousIdError, NotFoundError, ValidationError
 from .memory import get_memory, reverify
 
 EVIDENCE_KINDS = {
@@ -105,6 +105,45 @@ def _mark_unverifiable(conn, evidence_id: int, kind: str, ref: str | None, reaso
         "evidence_id": evidence_id, "kind": kind, "ref": ref,
         "status": "unverifiable", "reason": reason,
     }
+
+
+def find_evidence_store(local_conn, global_conn, evidence_id: int, scope: str | None = None):
+    """Same shape as `memory.find_memory_store`, for evidence rows: evidence
+    ids are also a per-store autoincrement sequence, so a bare id can
+    collide between the repo and global stores just like memory ids do.
+    `scope=None` checks both and raises AmbiguousIdError on a double hit
+    instead of silently verifying whichever store's row happened to match
+    first -- the same failure mode reported for memory ids in
+    prompt-bug-roco.md, just not routed through find_memory_store because
+    evidence rows aren't looked up by `get_memory`.
+    """
+    def _has_evidence(conn) -> bool:
+        return conn.execute(
+            "SELECT 1 FROM evidence WHERE id = ?", (evidence_id,)
+        ).fetchone() is not None
+
+    if scope == "repo":
+        if not _has_evidence(local_conn):
+            raise NotFoundError(f"no evidence with id {evidence_id}")
+        return local_conn
+    if scope == "global":
+        if global_conn is None or not _has_evidence(global_conn):
+            raise NotFoundError(f"no evidence with id {evidence_id}")
+        return global_conn
+
+    local_hit = _has_evidence(local_conn)
+    global_hit = global_conn is not None and _has_evidence(global_conn)
+
+    if local_hit and global_hit:
+        raise AmbiguousIdError(
+            f"evidence id {evidence_id} exists in both repo and global stores -- "
+            "pass --scope repo or --scope global to disambiguate"
+        )
+    if local_hit:
+        return local_conn
+    if global_hit:
+        return global_conn
+    raise NotFoundError(f"no evidence with id {evidence_id}")
 
 
 def verify_evidence(conn, evidence_id: int, repo_root=None) -> dict:
