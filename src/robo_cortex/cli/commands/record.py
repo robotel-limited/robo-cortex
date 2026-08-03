@@ -6,7 +6,10 @@ import sys
 from robo_cortex.core.memory import (
     CONFIDENCES,
     SCOPES,
+    STATEMENT_MAX,
     TYPES,
+    WHY_IT_MATTERS_MAX,
+    ASSUMPTIONS_MAX,
     record_batch,
     record_memory,
 )
@@ -16,37 +19,41 @@ from robo_cortex.cli._common import _get_cmd_name, _store, _global_store, cli_co
 
 @cli_command("record")
 def run(args) -> int:
-    with _store(args.repo) as (repo_root, conn):
-        if args.update_path:
-            if not (args.id and args.old_path and args.new_path):
-                print(
-                    "robo-cortex record --update-path: ID, --old-path, "
-                    "and --new-path are all required",
-                    file=sys.stderr,
-                )
-                return 2
-            result = update_path(conn, repo_root, args.id, args.old_path, args.new_path)
-            if args.json:
-                print(json.dumps(result))
-            else:
-                print(f"Updated memory {result['id']}: {args.old_path} -> {args.new_path}")
-            return 0
+    # --update-path / --add-path / --batch are inherently repo-local
+    # operations (paths are repo-relative; --batch explicitly refuses
+    # scope='global' lines -- see record_batch), so these still need a
+    # real, initialized repo store unconditionally.
+    if args.update_path or args.add_path or args.batch:
+        with _store(args.repo) as (repo_root, conn):
+            if args.update_path:
+                if not (args.id and args.old_path and args.new_path):
+                    print(
+                        "robo-cortex record --update-path: ID, --old-path, "
+                        "and --new-path are all required",
+                        file=sys.stderr,
+                    )
+                    return 2
+                result = update_path(conn, repo_root, args.id, args.old_path, args.new_path)
+                if args.json:
+                    print(json.dumps(result))
+                else:
+                    print(f"Updated memory {result['id']}: {args.old_path} -> {args.new_path}")
+                return 0
 
-        if args.add_path:
-            if not args.id:
-                print(
-                    "robo-cortex record --add-path: ID is required",
-                    file=sys.stderr,
-                )
-                return 2
-            result = add_path(conn, repo_root, args.id, args.add_path)
-            if args.json:
-                print(json.dumps(result))
-            else:
-                print(f"Added path to memory {result['id']}: {args.add_path}")
-            return 0
+            if args.add_path:
+                if not args.id:
+                    print(
+                        "robo-cortex record --add-path: ID is required",
+                        file=sys.stderr,
+                    )
+                    return 2
+                result = add_path(conn, repo_root, args.id, args.add_path)
+                if args.json:
+                    print(json.dumps(result))
+                else:
+                    print(f"Added path to memory {result['id']}: {args.add_path}")
+                return 0
 
-        if args.batch:
             lines = sys.stdin.read().splitlines()
             result = record_batch(conn, repo_root, lines)
             if args.json:
@@ -60,34 +67,39 @@ def run(args) -> int:
                     )
             return 0
 
-        if not (args.type and args.scope and args.statement and args.confidence):
-            print(
-                "robo-cortex record: --type, --scope, --statement, and "
-                "--confidence are required (or use --batch to read JSON "
-                "Lines from stdin, --update-path to relink an existing "
-                "memory, or --add-path to attach a path to one)",
-                file=sys.stderr,
-            )
-            return 2
+    if not (args.type and args.scope and args.statement and args.confidence):
+        print(
+            "robo-cortex record: --type, --scope, --statement, and "
+            "--confidence are required (or use --batch to read JSON "
+            "Lines from stdin, --update-path to relink an existing "
+            "memory, or --add-path to attach a path to one)",
+            file=sys.stderr,
+        )
+        return 2
 
-        if args.scope == "global":
-            # scope='global' memories live in ~/.cortex/global.db, not
-            # the local repo store -- ARCHITECTURE.md §2: scope B "cannot
-            # live in one repository's .cortex/".
-            with _global_store() as global_conn:
-                result = record_memory(
-                    global_conn,
-                    repo_root,
-                    type=args.type,
-                    scope=args.scope,
-                    statement=args.statement,
-                    confidence=args.confidence,
-                    why_it_matters=args.why_it_matters,
-                    assumptions=args.assumptions,
-                    paths=args.paths,
-                    lesson_from=args.lesson_from,
-                )
-        else:
+    if args.scope == "global":
+        # scope='global' memories live in ~/.cortex/global.db, not the
+        # local repo store -- ARCHITECTURE.md §2: scope B "cannot live in
+        # one repository's .cortex/". Global records also cannot carry
+        # --path (validated in record_memory), so repo_root is never
+        # actually used for this branch -- no repo resolution needed at
+        # all, meaning `record --scope global` now works from anywhere,
+        # including outside any git repo.
+        with _global_store() as global_conn:
+            result = record_memory(
+                global_conn,
+                None,
+                type=args.type,
+                scope=args.scope,
+                statement=args.statement,
+                confidence=args.confidence,
+                why_it_matters=args.why_it_matters,
+                assumptions=args.assumptions,
+                paths=args.paths,
+                lesson_from=args.lesson_from,
+            )
+    else:
+        with _store(args.repo) as (repo_root, conn):
             result = record_memory(
                 conn,
                 repo_root,
@@ -122,13 +134,24 @@ def register(subparsers):
     p.add_argument("--repo", default=None)
     p.add_argument("--type", choices=sorted(TYPES), default=None, help="Memory type: decision, lesson, fact, etc.")
     p.add_argument("--scope", choices=sorted(SCOPES), default=None, help="Memory scope: 'repo' (this project) or 'global' (reusable)")
-    p.add_argument("--statement", default=None)
+    p.add_argument(
+        "--statement", default=None,
+        help=f"The memory itself, in plain language (max {STATEMENT_MAX} characters)",
+    )
     p.add_argument(
         "--confidence", choices=sorted(CONFIDENCES), default=None,
         help="Confidence level: low, medium, or high"
     )
-    p.add_argument("--why", dest="why_it_matters", default=None)
-    p.add_argument("--assumptions", default=None, help="Comma-separated preconditions (for global memories, all must match the task text verbatim)")
+    p.add_argument(
+        "--why", dest="why_it_matters", default=None,
+        help=f"Why this matters (max {WHY_IT_MATTERS_MAX} characters)",
+    )
+    p.add_argument(
+        "--assumptions", default=None,
+        help=f"Comma-separated preconditions (max {ASSUMPTIONS_MAX} characters); "
+             "required for scope='global' -- all must match the task text "
+             "verbatim for the memory to be retrieved",
+    )
     p.add_argument(
         "--path", dest="paths", action="append", default=[]
     )

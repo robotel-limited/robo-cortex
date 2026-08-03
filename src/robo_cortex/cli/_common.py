@@ -4,7 +4,7 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
-from robo_cortex.core.errors import RoboCortexError
+from robo_cortex.core.errors import NotAGitRepoError, NotInitializedError, RoboCortexError
 from robo_cortex.core.store import open_global_store, open_store
 
 
@@ -23,6 +23,26 @@ def _store(repo_arg):
         yield repo_root, conn
     finally:
         conn.close()
+
+
+@contextmanager
+def _store_or_none(repo_arg):
+    """Like `_store`, but yields (None, None) instead of raising when no
+    repo store is available (not inside a git repo, or `init` never ran
+    there) -- for commands that can still do useful work from the global
+    store alone (e.g. `show`/`search`/`status` on a scope='global' id) and
+    shouldn't hard-fail just because no *local* store happens to exist.
+
+    `find_memory_store`/`find_evidence_store` already accept `local_conn is
+    None` and raise a clear, actionable error in the one case that still
+    needs it: `--scope repo` explicitly requested with no repo store to
+    satisfy it.
+    """
+    try:
+        with _store(repo_arg) as (repo_root, conn):
+            yield repo_root, conn
+    except (NotAGitRepoError, NotInitializedError):
+        yield None, None
 
 
 @contextmanager

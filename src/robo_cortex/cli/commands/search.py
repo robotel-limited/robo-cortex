@@ -4,7 +4,7 @@ import json
 import sys
 
 from robo_cortex.core.retrieve import DEFAULT_SEARCH_LIMIT, search_memory
-from robo_cortex.cli._common import _get_cmd_name, _store, _global_store, cli_command
+from robo_cortex.cli._common import _get_cmd_name, _store_or_none, _global_store, cli_command
 
 
 @cli_command("search")
@@ -13,7 +13,15 @@ def run(args) -> int:
         print("robo-cortex search: --query is required", file=sys.stderr)
         return 2
 
-    with _store(args.repo) as (repo_root, conn), _global_store() as global_conn:
+    with _store_or_none(args.repo) as (repo_root, conn), _global_store() as global_conn:
+        if conn is None and args.scope == "repo":
+            print(
+                "robo-cortex search: no repo store available (not inside a git "
+                "repo, or 'robo-cortex init' never ran there) -- pass --repo, "
+                "or drop --scope repo to also search the global store",
+                file=sys.stderr,
+            )
+            return 2
         result = search_memory(
             conn,
             repo_root,

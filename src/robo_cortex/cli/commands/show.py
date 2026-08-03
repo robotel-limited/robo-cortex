@@ -5,13 +5,13 @@ import sys
 
 from robo_cortex.core.memory import find_memory_store, get_memory
 from robo_cortex.core.retrieve import explain_memory_score
-from robo_cortex.cli._common import _get_cmd_name, _store, _global_store, cli_command
+from robo_cortex.cli._common import _get_cmd_name, _store_or_none, _global_store, cli_command
 from robo_cortex.cli._output import _format_score_breakdown, format_status
 
 
 @cli_command("show")
 def run(args) -> int:
-    with _store(args.repo) as (_repo_root, conn), _global_store() as global_conn:
+    with _store_or_none(args.repo) as (_repo_root, conn), _global_store() as global_conn:
         store = find_memory_store(conn, global_conn, args.id, scope=args.scope)
         result = get_memory(store, args.id)
         if args.explain_against:

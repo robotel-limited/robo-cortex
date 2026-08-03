@@ -117,7 +117,7 @@ def _detect_duplicates(conn, memory_id: int, scope: str, statement: str) -> None
 
 def record_memory(
     conn,
-    repo_root: Path,
+    repo_root: Path | None,
     *,
     type: str,
     scope: str,
@@ -302,8 +302,19 @@ def find_memory_store(local_conn, global_conn, memory_id: int, scope: str | None
     Used by every ID-taking command (`show`, `status`, `evidence
     add/verify`, `link`) so a scope='global' memory recorded once is still
     reachable by id from any repo afterward, unambiguously when it matters.
+
+    `local_conn` may be `None` -- the caller wasn't inside an initialized
+    repo store (see `cli._common._store_or_none`), which is fine for a
+    scope='global' lookup but not for an explicit `scope='repo'` one.
     """
     if scope == "repo":
+        if local_conn is None:
+            raise NotFoundError(
+                f"no memory with id {memory_id}: no repo store available "
+                "(not inside a git repo, or 'robo-cortex init' never ran "
+                "there) -- pass --repo, or drop --scope repo to also check "
+                "the global store"
+            )
         get_memory(local_conn, memory_id)
         return local_conn
     if scope == "global":
@@ -312,7 +323,7 @@ def find_memory_store(local_conn, global_conn, memory_id: int, scope: str | None
         get_memory(global_conn, memory_id)
         return global_conn
 
-    local_hit = _has_memory(local_conn, memory_id)
+    local_hit = local_conn is not None and _has_memory(local_conn, memory_id)
     global_hit = global_conn is not None and _has_memory(global_conn, memory_id)
 
     if local_hit and global_hit:

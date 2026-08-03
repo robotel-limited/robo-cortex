@@ -33,7 +33,20 @@ from robo_cortex.core.memory import record_memory as _record_memory
 from robo_cortex.core.retrieve import DEFAULT_BUDGET_ITEMS, DEFAULT_BUDGET_TOKENS, DEFAULT_SEARCH_LIMIT
 from robo_cortex.core.retrieve import retrieve_context as _retrieve_context
 from robo_cortex.core.retrieve import search_memory as _search_memory
+from robo_cortex.core.errors import NotAGitRepoError, NotInitializedError
 from robo_cortex.core.store import open_global_store, open_store
+
+
+def _open_store_or_none(repo_path):
+    """Like `open_store`, but returns (None, None) instead of raising when
+    no repo store is available (not inside a git repo, or `init` never ran
+    there) -- every method below still works from the global store alone in
+    that case (mirrors cli._common._store_or_none; same bug, same fix, two
+    surfaces -- see CHANGELOG 0.5.0)."""
+    try:
+        return open_store(repo_path)
+    except (NotAGitRepoError, NotInitializedError):
+        return None, None
 
 
 class RoboCortex:
@@ -53,7 +66,14 @@ class RoboCortex:
         explain: bool = False,
     ) -> dict:
         """Ranked, budgeted context pack for a task (same result shape as
-        `roco retrieve --json`)."""
+        `roco retrieve --json`).
+
+        Deliberately strict about the repo store, unlike search()/
+        get_memory()/list_memories() below: retrieve's whole purpose is
+        local-repo-aware context, so an uninitialized repo raises
+        NotInitializedError instead of silently degrading to global-only
+        results (pinned by test_retrieve_on_uninitialized_repo_raises_not_initialized).
+        """
         repo_root, conn = open_store(self.repo_path)
         try:
             global_conn = open_global_store()
@@ -84,20 +104,25 @@ class RoboCortex:
         applies) and is written to the shared cross-project store
         (~/.cortex/global.db), not this repo's local one -- this is the bug
         that made scope='global' unreachable through the pre-0.3.0 SDK.
+
+        scope='global' never resolves a repo store at all (global records
+        can't carry `paths` -- validated in `record_memory`, so `repo_root`
+        would never actually be used): `record(..., scope="global")` works
+        from anywhere, including outside any git repo.
         """
+        if scope == "global":
+            global_conn = open_global_store()
+            try:
+                return _record_memory(
+                    global_conn, None, type=type, scope=scope,
+                    statement=statement, confidence=confidence,
+                    why_it_matters=why_it_matters, assumptions=assumptions,
+                    paths=paths, lesson_from=lesson_from,
+                )
+            finally:
+                global_conn.close()
         repo_root, repo_conn = open_store(self.repo_path)
         try:
-            if scope == "global":
-                global_conn = open_global_store()
-                try:
-                    return _record_memory(
-                        global_conn, repo_root, type=type, scope=scope,
-                        statement=statement, confidence=confidence,
-                        why_it_matters=why_it_matters, assumptions=assumptions,
-                        paths=paths, lesson_from=lesson_from,
-                    )
-                finally:
-                    global_conn.close()
             return _record_memory(
                 repo_conn, repo_root, type=type, scope=scope,
                 statement=statement, confidence=confidence,
@@ -119,7 +144,7 @@ class RoboCortex:
         `retrieve()`; unlike retrieve, global-store results are not gated
         by assumptions (this is an explicit lookup, not a proactive
         suggestion)."""
-        repo_root, conn = open_store(self.repo_path)
+        repo_root, conn = _open_store_or_none(self.repo_path)
         try:
             global_conn = open_global_store()
             try:
@@ -130,7 +155,8 @@ class RoboCortex:
             finally:
                 global_conn.close()
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
 
     def list_memories(
         self,
@@ -140,10 +166,10 @@ class RoboCortex:
     ) -> list:
         """List memories, merged and id-sorted. scope=None (default)
         returns both repo and global stores, same as `roco list`."""
-        repo_root, conn = open_store(self.repo_path)
+        repo_root, conn = _open_store_or_none(self.repo_path)
         try:
             results = []
-            if scope in (None, "repo"):
+            if conn is not None and scope in (None, "repo"):
                 results += _list_memories(conn, status=status, scope=scope, type=type)
             if scope in (None, "global"):
                 global_conn = open_global_store()
@@ -154,13 +180,14 @@ class RoboCortex:
             results.sort(key=lambda m: m["id"])
             return results
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
 
     def get_memory(self, id: int, scope: Optional[str] = None) -> dict:
         """Full detail on one memory: fields, paths, evidence, links.
         `scope` disambiguates an id that collides between the repo and
         global stores (their id sequences are independent counters)."""
-        repo_root, conn = open_store(self.repo_path)
+        repo_root, conn = _open_store_or_none(self.repo_path)
         try:
             global_conn = open_global_store()
             try:
@@ -169,7 +196,8 @@ class RoboCortex:
             finally:
                 global_conn.close()
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
 
 
 # Convenience functions for one-off calls without instantiating RoboCortex,

@@ -5,12 +5,12 @@ import sys
 
 from robo_cortex.core.lifecycle import STATUS_ACTIONS, change_status, status_batch
 from robo_cortex.core.memory import find_memory_store
-from robo_cortex.cli._common import _get_cmd_name, _store, _global_store, cli_command
+from robo_cortex.cli._common import _get_cmd_name, _store_or_none, _global_store, cli_command
 
 
 @cli_command("status")
 def run(args) -> int:
-    with _store(args.repo) as (repo_root, conn), _global_store() as global_conn:
+    with _store_or_none(args.repo) as (repo_root, conn), _global_store() as global_conn:
         if args.batch:
             lines = sys.stdin.read().splitlines()
             result = status_batch(conn, global_conn, repo_root, lines)

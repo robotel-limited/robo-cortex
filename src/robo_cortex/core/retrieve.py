@@ -201,12 +201,13 @@ def _score_all_candidates(
     scored = []
     omitted = []
 
-    local_rows = _fts_candidates(local_conn, task, "repo")
-    local_scores = _normalized_scores(local_rows)
-    for memory_id, _raw in local_rows:
-        memory = get_memory(local_conn, memory_id)
-        components = score_components(local_conn, memory, task_paths, local_scores[memory_id], now)
-        scored.append((local_conn, memory, components))
+    if local_conn is not None:
+        local_rows = _fts_candidates(local_conn, task, "repo")
+        local_scores = _normalized_scores(local_rows)
+        for memory_id, _raw in local_rows:
+            memory = get_memory(local_conn, memory_id)
+            components = score_components(local_conn, memory, task_paths, local_scores[memory_id], now)
+            scored.append((local_conn, memory, components))
 
     if global_conn is not None:
         global_rows = _fts_candidates(global_conn, task, "global")
@@ -378,14 +379,15 @@ def search_memory(
     if not query or not query.strip():
         raise ValidationError("query must not be empty")
 
-    refresh_staleness(conn, repo_root)
+    if conn is not None:
+        refresh_staleness(conn, repo_root)
 
     fts_query = fts_query_string(query)
     if not fts_query:
         raise ValidationError("query must contain at least one searchable word")
 
     rows = []
-    if scope in (None, "repo"):
+    if conn is not None and scope in (None, "repo"):
         rows += list(_search_one_store(conn, fts_query, scope, type, status))
     if global_conn is not None and scope in (None, "global"):
         rows += list(_search_one_store(global_conn, fts_query, scope, type, status))

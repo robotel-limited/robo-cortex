@@ -95,6 +95,8 @@ roco record --type lesson --scope global \
   --assumptions "css grid gap safari"
 ```
 
+Global-scope commands (`record --scope global`, `show`, `search`, `status`, `link`, `evidence`, `list`) work from anywhere, including outside any git repository — the global store (`~/.cortex/global.db`) isn't tied to a project. `retrieve` is the one exception: it's local-repo-aware by design, so it still requires an initialized repo.
+
 ### Enable enforcement (recommended)
 
 ```bash

@@ -5,13 +5,13 @@ import sys
 
 from robo_cortex.core.lifecycle import create_link
 from robo_cortex.core.memory import find_memory_store
-from robo_cortex.cli._common import _get_cmd_name, _store, _global_store, LINK_TYPE_ARGS, cli_command
+from robo_cortex.cli._common import _get_cmd_name, _store_or_none, _global_store, LINK_TYPE_ARGS, cli_command
 
 
 @cli_command("link")
 def run(args) -> int:
     link_type = LINK_TYPE_ARGS[args.link_type]
-    with _store(args.repo) as (_repo_root, conn), _global_store() as global_conn:
+    with _store_or_none(args.repo) as (_repo_root, conn), _global_store() as global_conn:
         store1 = find_memory_store(conn, global_conn, args.id1, scope=args.scope)
         store2 = find_memory_store(conn, global_conn, args.id2, scope=args.scope)
         if store1 is not store2:

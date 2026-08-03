@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-08-03
+
+### Fixed
+
+- **Global-scope commands no longer require a local repo store.** `show`, `search`, `retrieve`, `status`, `link`, `evidence add`/`verify`, `list`, and `record --scope global` used to unconditionally call `open_store()` first — hard-failing with "not inside a git repository" (or "run init first") even when the operation only ever touched `~/.cortex/global.db`, which is repo-independent by construction (ARCHITECTURE.md §2). In practice this meant a purely global lookup (`roco show <global-id>`) only worked if you happened to be standing inside *some* already-initialized repo — any one would do, but finding one by trial and error was real, reported friction. These commands now resolve the repo store lazily and fall back to global-only when none is available; `--scope repo` explicitly requested with no repo store still fails, now with a clear, actionable message (`no repo store available (not inside a git repo, or 'robo-cortex init' never ran there) -- pass --repo, or drop --scope repo to also check the global store`) instead of either crashing or silently returning nothing.
+- **`record --scope global`** specifically no longer resolves a repo at all (not even lazily) — global records can't carry `--path` (already validated), so `repo_root` was accepted but never actually used for that branch. `roco record --scope global ...` now works from anywhere, including outside any git repo entirely.
+
+### Added
+
+- **Character limits in `record --help`.** `--statement` (500), `--why` (300), and `--assumptions` (500) previously enforced their limits only at write time, with no hint in `--help` — the only way to learn the ceiling was to hit the `ValidationError` and shorten. Now documented inline.
+
 ## [0.4.3] — 2026-07-31
 
 ### Fixed

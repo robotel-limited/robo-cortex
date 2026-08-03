@@ -4,15 +4,23 @@ import json
 import sys
 
 from robo_cortex.core.memory import list_memories
-from robo_cortex.cli._common import _get_cmd_name, _store, _global_store, cli_command
+from robo_cortex.cli._common import _get_cmd_name, _store_or_none, _global_store, cli_command
 from robo_cortex.cli._output import format_status
 
 
 @cli_command("list")
 def run(args) -> int:
-    with _store(args.repo) as (_repo_root, conn), _global_store() as global_conn:
+    with _store_or_none(args.repo) as (_repo_root, conn), _global_store() as global_conn:
+        if conn is None and args.scope == "repo":
+            print(
+                "robo-cortex list: no repo store available (not inside a git "
+                "repo, or 'robo-cortex init' never ran there) -- pass --repo, "
+                "or drop --scope repo to also list the global store",
+                file=sys.stderr,
+            )
+            return 2
         results = []
-        if args.scope in (None, "repo"):
+        if conn is not None and args.scope in (None, "repo"):
             results += list_memories(
                 conn,
                 status=args.status,

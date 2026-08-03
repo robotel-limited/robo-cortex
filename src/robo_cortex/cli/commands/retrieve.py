@@ -14,6 +14,12 @@ from robo_cortex.cli._output import _format_score_breakdown, format_status
 
 @cli_command("retrieve")
 def run(args) -> int:
+    # Deliberately strict, unlike show/search/status/... below: retrieve's
+    # whole purpose is local-repo-aware context, so an uninitialized repo
+    # (forgot to run `init`) should fail loudly, not silently degrade to
+    # global-only results that could read as "nothing relevant here" when
+    # the real problem is the missing local store. Pinned by
+    # tests/test_sdk.py::test_retrieve_on_uninitialized_repo_raises_not_initialized.
     if not args.task:
         print("robo-cortex retrieve: --task is required", file=sys.stderr)
         return 2

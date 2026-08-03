@@ -116,13 +116,23 @@ def find_evidence_store(local_conn, global_conn, evidence_id: int, scope: str | 
     first -- the same failure mode reported for memory ids in
     prompt-bug-roco.md, just not routed through find_memory_store because
     evidence rows aren't looked up by `get_memory`.
+
+    `local_conn` may be `None` -- same as `find_memory_store`, this is fine
+    for a scope='global' lookup but not for an explicit `scope='repo'` one.
     """
     def _has_evidence(conn) -> bool:
-        return conn.execute(
+        return conn is not None and conn.execute(
             "SELECT 1 FROM evidence WHERE id = ?", (evidence_id,)
         ).fetchone() is not None
 
     if scope == "repo":
+        if local_conn is None:
+            raise NotFoundError(
+                f"no evidence with id {evidence_id}: no repo store available "
+                "(not inside a git repo, or 'robo-cortex init' never ran "
+                "there) -- pass --repo, or drop --scope repo to also check "
+                "the global store"
+            )
         if not _has_evidence(local_conn):
             raise NotFoundError(f"no evidence with id {evidence_id}")
         return local_conn

@@ -10,12 +10,12 @@ from robo_cortex.core.evidence import (
     verify_evidence,
 )
 from robo_cortex.core.memory import find_memory_store
-from robo_cortex.cli._common import _get_cmd_name, _store, _global_store, cli_command
+from robo_cortex.cli._common import _get_cmd_name, _store_or_none, _global_store, cli_command
 
 
 @cli_command("evidence add")
 def run_add(args) -> int:
-    with _store(args.repo) as (repo_root, conn), _global_store() as global_conn:
+    with _store_or_none(args.repo) as (repo_root, conn), _global_store() as global_conn:
         store = find_memory_store(conn, global_conn, args.id, scope=args.scope)
         result = attach_evidence(
             store,
@@ -41,7 +41,7 @@ def run_add(args) -> int:
 
 @cli_command("evidence verify")
 def run_verify(args) -> int:
-    with _store(args.repo) as (repo_root, conn), _global_store() as global_conn:
+    with _store_or_none(args.repo) as (repo_root, conn), _global_store() as global_conn:
         # evidence rows live in whichever store their memory lives in;
         # id sequences are independent per store. --scope disambiguates
         # an id that collides between stores, same as for memory ids.
