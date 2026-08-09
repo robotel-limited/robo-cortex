@@ -4,7 +4,7 @@ from pathlib import Path
 
 from . import db as dbmod
 from .errors import AmbiguousIdError, NotFoundError, ValidationError
-from .git import blob_hash_at_head
+from .git import blob_hash_at_head, working_tree_hash
 from .text import fts_query_string, tokenize_without_stopwords
 
 TYPES = {
@@ -347,8 +347,8 @@ def _has_memory(conn, memory_id: int) -> bool:
 
 
 def reverify(conn, repo_root: Path, memory_id: int) -> None:
-    """Re-verification: recapture the current HEAD blob hash of every
-    linked path and bump `last_verified_at` to now.
+    """Re-verification: recapture the current blob hash of every linked
+    path and bump `last_verified_at` to now.
 
     ARCHITECTURE.md §5.3 promises hash capture "at record and at verify" --
     this is the "at verify" half, which had never actually been wired up
@@ -366,12 +366,28 @@ def reverify(conn, repo_root: Path, memory_id: int) -> None:
     Called whenever a memory transitions to `active` -- the only status
     reachable from both `provisional` and `needs_review` (§4), and the one
     that means "current, as of now" either way.
+
+    Hashes from the working tree (on-disk content), not HEAD: the
+    documented recovery from a pre-commit block is `activate` *then*
+    re-run `git commit`, while the fix is still staged and HEAD hasn't
+    moved yet. Capturing HEAD there is a no-op -- it recomputes the exact
+    pre-edit hash the hook already flagged, so the very next `hooks check`
+    (comparing against staged content) re-blocks with the identical list,
+    and nothing short of `--no-verify` gets past it. `git add` mirrors
+    on-disk content into the index, so working-tree and staged hashes
+    agree in the normal case; this also matches the already-committed
+    case (working tree == HEAD then), so it doesn't change behavior there.
+    Falls back to HEAD only if the path is missing on disk (e.g. an
+    unstaged deletion), preserving the old not-found error for a path
+    genuinely gone at HEAD too.
     """
     path_rows = conn.execute(
         "SELECT path FROM memory_path WHERE memory_id = ?", (memory_id,)
     ).fetchall()
     for (path,) in path_rows:
-        new_hash = blob_hash_at_head(repo_root, path)
+        new_hash = working_tree_hash(repo_root, path)
+        if new_hash is None:
+            new_hash = blob_hash_at_head(repo_root, path)
         conn.execute(
             "UPDATE memory_path SET blob_hash = ? WHERE memory_id = ? AND path = ?",
             (new_hash, memory_id, path),

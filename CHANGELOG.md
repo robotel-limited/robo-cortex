@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-08-09
+
+### Fixed
+
+- **`activate` didn't clear a pre-commit block on staged-but-uncommitted changes.** The pre-commit hook's own message tells you to run `roco status <id> activate --reason "..."` then commit again — but `activate` (via `reverify()`) recaptured each linked path's blob hash from HEAD, not from the staged content that triggered the block. If the edit was still staged (the normal case: hook fires, you review, you activate, *then* commit), HEAD hadn't moved yet, so `reverify` just recomputed the same pre-edit hash it already had. The hook fired again on the retried commit with the identical list, and only `git commit --no-verify` actually got past it. `reverify()` now hashes the working-tree content (falling back to HEAD only when the path is missing on disk), which matches staged content in the normal `git add` case and matches HEAD in the already-committed case — so it fixes the staged-block loop without changing behavior for the post-commit self-heal path the existing tests cover.
+
 ## [0.5.0] — 2026-08-03
 
 ### Fixed
