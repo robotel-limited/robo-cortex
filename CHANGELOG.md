@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-08-10
+
+### Fixed
+
+- **`roco mcp` broke on every fresh install.** The `mcp` optional dependency was pinned `mcp>=1.28` with no upper bound; upstream shipped `mcp` 2.0.0, which renamed `mcp.server.fastmcp.FastMCP` to `mcp.server.mcpserver.MCPServer`. `mcp_server.py` still imports the old path, so `pip install robo-cortex[mcp]` succeeded but `roco mcp` failed immediately with a misleading "the 'mcp' package is not installed" (the real, swallowed error was `ModuleNotFoundError: No module named 'mcp.server.fastmcp'`). Pinned to `mcp>=1.28,<2.0` to restore working installs; migrating to the new `MCPServer` API to support `mcp` 2.0.0 is separate future work.
+
 ## [0.6.0] — 2026-08-10
 
 ### Fixed
