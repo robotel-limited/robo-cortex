@@ -1,4 +1,4 @@
-__version__ = "0.5.1"
+__version__ = "0.6.0"
 
 from robo_cortex.sdk import RoboCortex, retrieve, record, search
 

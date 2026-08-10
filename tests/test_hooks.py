@@ -200,6 +200,57 @@ def test_installed_hook_allows_commit_with_no_verify_bypass(tmp_path):
     assert commit.returncode == 0, commit.stderr
 
 
+def test_installed_hook_documented_recovery_works_on_already_active_memory(tmp_path):
+    """Regression for roco memory #5: activating an already-`active` memory
+    was the hook's own printed recovery ("re-verify (roco status <id>
+    activate --reason ...) and commit again"), but the DB status column
+    never actually left 'active' for a still-staged edit -- refresh_staleness
+    only compares stored hashes against HEAD, which hasn't moved yet at
+    pre-commit time. That made the documented remedy an always-illegal
+    active->active transition, so only --no-verify ever got past the block.
+    """
+    repo = build_fixture_repo_a(tmp_path)
+    _init(repo)
+    memory_id = _record_on_scanner(repo)
+    activate = _run_cli(
+        "status", str(memory_id), "activate", "--reason", "baseline active",
+        "--repo", str(repo), "--scope", "repo", "--json",
+    )
+    assert activate.returncode == 0, activate.stderr
+    assert json.loads(activate.stdout)["status"] == "active"
+
+    _run_cli("hooks", "install", "--repo", str(repo))
+
+    scanner = repo / "src" / "fixture_a" / "scanner.py"
+    scanner.write_text(scanner.read_text().replace("batch_size=50", "batch_size=200"))
+    run_git(repo, "add", "-A")
+
+    blocked = subprocess.run(
+        ["git", "commit", "-m", "Raise batch_size"],
+        cwd=repo, capture_output=True, text=True,
+    )
+    assert blocked.returncode != 0
+
+    reactivate = _run_cli(
+        "status", str(memory_id), "activate", "--reason", "reviewed, still accurate",
+        "--repo", str(repo), "--scope", "repo", "--json",
+    )
+    assert reactivate.returncode == 0, reactivate.stderr
+    assert json.loads(reactivate.stdout)["status"] == "active"
+
+    listed = json.loads(
+        _run_cli("list", "--repo", str(repo), "--scope", "repo", "--json").stdout
+    )
+    memory = next(m for m in listed if m["id"] == memory_id)
+    assert memory["last_verified_at"] is not None
+
+    retried = subprocess.run(
+        ["git", "commit", "-m", "Raise batch_size"],
+        cwd=repo, capture_output=True, text=True,
+    )
+    assert retried.returncode == 0, retried.stderr
+
+
 def test_installed_hook_allows_unrelated_commit(tmp_path):
     repo = build_fixture_repo_a(tmp_path)
     _init(repo)

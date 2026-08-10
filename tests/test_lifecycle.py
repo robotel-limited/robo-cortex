@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from robo_cortex.core.db import connect, migrate
@@ -66,6 +68,35 @@ def test_abandon_then_archive_matches_matrix(tmp_path):
 
     with pytest.raises(IllegalTransitionError):
         change_status(conn, repo, memory_id, "active", "trying to un-archive")
+
+
+def test_active_can_reactivate_itself(tmp_path):
+    """Regression for roco memory #5: the pre-commit hook's own printed
+    remedy is unconditionally `roco status <id> activate --reason "..."`,
+    but a still-staged (uncommitted) edit to an *already active* memory's
+    linked path is only caught by `affected`'s read-only report -- nothing
+    moves the DB status column off 'active' before the commit lands. Before
+    this fix, 'active' was missing from its own allowed-target set, so that
+    exact recovery command was a guaranteed-illegal active->active
+    transition and always raised, leaving --no-verify as the only way out."""
+    repo, conn = _store(tmp_path)
+    memory_id = _record(repo, conn)
+    old_timestamp = (datetime.now(timezone.utc) - timedelta(days=10)).strftime(
+        "%Y-%m-%dT%H:%M:%S.000000Z"
+    )
+    conn.execute(
+        "UPDATE memory SET status = 'active', last_verified_at = ? WHERE id = ?",
+        (old_timestamp, memory_id),
+    )
+
+    result = change_status(conn, repo, memory_id, "active", "reviewed, still accurate")
+
+    assert result["status"] == "active"
+    memory = get_memory(conn, memory_id)
+    assert memory["status"] == "active"
+    assert memory["status_reason"] == "reviewed, still accurate"
+    # reverify() actually ran -- last_verified_at was bumped, not left stale
+    assert memory["last_verified_at"] > old_timestamp
 
 
 def test_active_can_be_abandoned(tmp_path):

@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-08-10
+
+### Fixed
+
+- **The pre-commit hook's own documented recovery still failed for an already-`active` memory.** 0.5.1 fixed `reverify()` to hash working-tree content instead of HEAD, but missed that `active` was never in its own allowed-transition set — so `roco status <id> activate --reason "..."` (the hook's unconditional printed remedy) was an illegal `active`->`active` transition and always raised `IllegalTransitionError` whenever the blocked memory's stored status was still `active`, which is the common case: `refresh_staleness` only compares stored hashes against HEAD, and a still-staged edit doesn't move HEAD, so the status column never actually left `active` before the retried commit. `--no-verify` was the only way past the block. `active` is now a legal self-transition target, running the same `reverify()` recapture as any other path to `active`. Found live in `/srv/robo-rag`, tracked as roco memory #5.
+- **`roco list --json` never included `last_verified_at`.** `list_memories()` hardcoded its selected columns without it, so any diagnosis of a stuck re-verification loop via `roco list --json` always reported the field as missing/`None` regardless of whether re-verification had actually run — a contributing factor in how the bug above was diagnosed. Now included.
+
+### Added
+
+- **`activate` now works as a manual re-verification of an already-`active` memory**, not just as a `provisional`/`needs_review` -> `active` promotion. Previously guaranteed to fail with `IllegalTransitionError` when the current status was already `active` — see Fixed above.
+
 ## [0.5.1] — 2026-08-09
 
 ### Fixed

@@ -16,9 +16,19 @@ from .memory import get_memory, reverify, find_memory_store
 # very evidence that shows it was a dead end -- e.g. a benchmark proving a
 # caching attempt made things slower. Recording the evidence before calling
 # abandon is the natural order; the state machine should not forbid it.
+#
+# active -> active (self-transition) closes the pre-commit re-block loop
+# (0.5.1's reverify() working-tree-hash fix was necessary but not
+# sufficient -- see roco memory #5). The hook only compares stored hashes
+# against HEAD via refresh_staleness; a still-staged edit to an *already
+# active* memory's linked path is caught solely by `affected`'s read-only
+# report, so the DB status column never actually moves off 'active'. The
+# hook's own printed remedy is unconditionally `roco status <id> activate`
+# -- without this entry, that command was an illegal 'active'->'active'
+# transition and always raised, leaving --no-verify as the only way out.
 ALLOWED_TRANSITIONS = {
     "provisional": {"active", "needs_review", "abandoned"},
-    "active": {"needs_review", "superseded", "invalidated", "archived", "abandoned"},
+    "active": {"active", "needs_review", "superseded", "invalidated", "archived", "abandoned"},
     "needs_review": {"active", "superseded", "invalidated"},
     "superseded": {"archived"},
     "invalidated": {"archived"},

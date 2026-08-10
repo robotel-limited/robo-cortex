@@ -408,7 +408,7 @@ def list_memories(
     needs_consolidation: bool = False,
     abandoned_without_lesson: bool = False,
 ) -> list[dict]:
-    columns = ["id", "type", "scope", "statement", "status", "confidence"]
+    columns = ["id", "type", "scope", "statement", "status", "confidence", "last_verified_at"]
     query = f"SELECT DISTINCT m.{', m.'.join(columns)} FROM memory m WHERE 1 = 1"
     params: list = []
     if status:
