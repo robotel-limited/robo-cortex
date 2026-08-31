@@ -51,6 +51,19 @@ def migrate(conn: sqlite3.Connection) -> int:
     greater than the database's current PRAGMA user_version, so re-running
     this on an already-current database (or a fresh one after a prior run)
     is a no-op. Works identically from empty and from an existing schema.
+
+    foreign_keys is turned off for the duration of each migration script and
+    verified with a post-migration foreign_key_check. It must be off before
+    the script's own BEGIN, since SQLite ignores this pragma once a
+    transaction is already open -- and a migration that rebuilds a
+    referenced table (create-copy-drop-rename, the only way to change a
+    CHECK constraint) would otherwise have its own DROP TABLE silently
+    cascade-delete every row in the tables that reference it, since SQLite
+    applies ON DELETE actions for a DROP TABLE same as for an explicit
+    DELETE when foreign_keys is on. Caught by testing a table-rebuild
+    migration against a populated fixture DB before release -- the child
+    rows in evidence/memory_link/memory_path were wiped silently, no error
+    raised.
     """
     try:
         version = current_version(conn)
@@ -59,8 +72,15 @@ def migrate(conn: sqlite3.Connection) -> int:
             if file_version <= version:
                 continue
             sql = path.read_text()
+            conn.execute("PRAGMA foreign_keys = OFF")
             script = f"BEGIN;\n{sql}\nPRAGMA user_version = {file_version};\nCOMMIT;"
             conn.executescript(script)
+            conn.execute("PRAGMA foreign_keys = ON")
+            violations = conn.execute("PRAGMA foreign_key_check").fetchall()
+            if violations:
+                raise sqlite3.IntegrityError(
+                    f"migration {file_version} left dangling foreign keys: {violations}"
+                )
             version = file_version
         return version
     except sqlite3.OperationalError as error:
