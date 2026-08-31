@@ -64,6 +64,13 @@ def migrate(conn: sqlite3.Connection) -> int:
     migration against a populated fixture DB before release -- the child
     rows in evidence/memory_link/memory_path were wiped silently, no error
     raised.
+
+    If the script itself fails partway through (bad SQL, SQLITE_BUSY from a
+    concurrent writer), its own BEGIN never reaches its COMMIT -- so this
+    rolls back explicitly before re-enabling foreign_keys, since that pragma
+    is *also* a no-op while a transaction is open. Skipping the rollback
+    would leave FK enforcement silently disabled on this connection for
+    good, a worse bug than the one this guards against.
     """
     try:
         version = current_version(conn)
@@ -72,10 +79,21 @@ def migrate(conn: sqlite3.Connection) -> int:
             if file_version <= version:
                 continue
             sql = path.read_text()
-            conn.execute("PRAGMA foreign_keys = OFF")
             script = f"BEGIN;\n{sql}\nPRAGMA user_version = {file_version};\nCOMMIT;"
-            conn.executescript(script)
-            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA foreign_keys = OFF")
+            try:
+                conn.executescript(script)
+            except BaseException:
+                # The script's own BEGIN never reached its COMMIT, so an
+                # explicit rollback is required to close that transaction --
+                # without it, the PRAGMA foreign_keys = ON below is a no-op
+                # (SQLite ignores that pragma while a transaction is open),
+                # leaving FK enforcement silently disabled on this connection
+                # for good, a worse bug than the one this guards against.
+                conn.rollback()
+                raise
+            finally:
+                conn.execute("PRAGMA foreign_keys = ON")
             violations = conn.execute("PRAGMA foreign_key_check").fetchall()
             if violations:
                 raise sqlite3.IntegrityError(
