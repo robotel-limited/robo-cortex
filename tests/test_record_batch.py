@@ -55,7 +55,7 @@ def test_batch_reports_each_invalid_line_and_still_records_valid_ones(tmp_path):
     repo, conn = _store(tmp_path)
     lines = [
         _line(type="fact", scope="repo", statement="good line one", confidence="low"),
-        _line(type="fact", scope="repo", statement="x" * 501, confidence="low"),  # too long
+        _line(type="fact", scope="repo", statement="x" * 751, confidence="low"),  # too long
         "not even json",
         _line(type="fact", scope="repo", statement="dead path", confidence="low",
               paths=["does/not/exist.py"]),
@@ -67,7 +67,7 @@ def test_batch_reports_each_invalid_line_and_still_records_valid_ones(tmp_path):
     assert result["created"] == 2
     assert len(result["failed"]) == 3
     assert result["failed"][0]["line"] == 2
-    assert "exceeds 500" in result["failed"][0]["error"]
+    assert "exceeds 750" in result["failed"][0]["error"]
     assert result["failed"][1]["line"] == 3
     assert "invalid JSON" in result["failed"][1]["error"]
     assert result["failed"][2]["line"] == 4

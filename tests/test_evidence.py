@@ -59,8 +59,8 @@ def test_attach_evidence_validates_kind_and_description(tmp_path):
         attach_evidence(conn, repo, result["id"], kind="nonsense", description="x")
     with pytest.raises(ValidationError, match="must not be empty"):
         attach_evidence(conn, repo, result["id"], kind="free_text", description="  ")
-    with pytest.raises(ValidationError, match="exceeds 500"):
-        attach_evidence(conn, repo, result["id"], kind="free_text", description="x" * 501)
+    with pytest.raises(ValidationError, match="exceeds 750"):
+        attach_evidence(conn, repo, result["id"], kind="free_text", description="x" * 751)
 
 
 def test_evidence_strength_mechanical_not_judged(tmp_path):

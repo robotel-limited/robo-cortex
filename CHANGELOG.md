@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-11-04
+
+### Added
+
+- **`statement`/`assumptions`/evidence `description` caps raised from 500 to 750 characters.** Revisits the 2026-08-31 decision to hold the line at 500 (roco's terseness was deliberate, and dimag already routes longer content elsewhere) — the migration mechanism to change a SQLite CHECK constraint (create-copy-drop-rename table rebuild) was proven safe against a populated fixture DB back then but never actually shipped as a real migration. New `migrations/0004_widen_statement_limits.sql` rebuilds `memory` and `evidence` with the wider caps, preserving every row, `memory_path`/`evidence`/`memory_link` foreign keys, the FTS5 index, and the AUTOINCREMENT sequence (reseeded explicitly — a table-rebuild loses `sqlite_sequence`'s row for the old table name). `--statement`/`--why`/`--assumptions` CLI help text updates automatically (sourced from the same constants). Covered by a new `test_db.py` case that upgrades a populated version-3 database and checks FK integrity, row survival, and FTS lookup post-migration.
+
 ## [0.6.1] — 2026-08-10
 
 ### Fixed

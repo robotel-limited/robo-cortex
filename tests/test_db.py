@@ -1,13 +1,15 @@
+import sqlite3
+
 import pytest
 
-from robo_cortex.core.db import connect, current_version, execute, migrate
+from robo_cortex.core.db import MIGRATIONS_DIR, connect, current_version, execute, migrate
 from robo_cortex.core.errors import BusyError
 
 
 def test_migrate_from_empty_creates_schema(tmp_path):
     conn = connect(tmp_path / "memory.db")
     version = migrate(conn)
-    assert version == 3
+    assert version == 4
     tables = {
         row[0]
         for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -20,8 +22,8 @@ def test_migrate_is_idempotent_on_same_connection(tmp_path):
     conn = connect(tmp_path / "memory.db")
     migrate(conn)
     version_again = migrate(conn)
-    assert version_again == 3
-    assert current_version(conn) == 3
+    assert version_again == 4
+    assert current_version(conn) == 4
     conn.close()
 
 
@@ -34,7 +36,7 @@ def test_migrate_is_idempotent_across_reopened_connections(tmp_path):
 
     second = connect(db_path)
     version = migrate(second)
-    assert version == 3
+    assert version == 4
     second.close()
 
 
@@ -48,6 +50,91 @@ def test_migrated_db_accepts_a_row(tmp_path):
     )
     row = conn.execute("SELECT statement FROM memory").fetchone()
     assert row[0] == "The scanner batches at 50 items."
+    conn.close()
+
+
+def test_0004_widens_limits_and_preserves_existing_rows_and_fk_integrity(tmp_path):
+    """Upgrade path: a DB already on version 3 (pre-0004, 500-char caps),
+    carrying rows in every table 0004's rebuild touches or references
+    (memory, evidence, memory_path, memory_link), must come out of
+    `migrate()` on version 4 with those rows intact, FK-valid, and able to
+    accept a statement/description between 501 and 750 chars that version 3
+    would have rejected. Exercises the exact failure mode flagged in
+    db.py's migrate() docstring: a table-rebuild migration silently
+    cascade-deleting referencing rows if foreign_keys isn't off for the
+    rebuild.
+    """
+    conn = connect(tmp_path / "memory.db")
+    v3_files = [p for p in sorted(MIGRATIONS_DIR.glob("*.sql")) if int(p.name.split("_", 1)[0]) <= 3]
+    for path in v3_files:
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.executescript(f"BEGIN;\n{path.read_text()}\nPRAGMA user_version = {path.name.split('_', 1)[0]};\nCOMMIT;")
+        conn.execute("PRAGMA foreign_keys = ON")
+    assert current_version(conn) == 3
+
+    memory_id = execute(
+        conn,
+        "INSERT INTO memory (type, scope, statement, confidence) VALUES (?, ?, ?, ?)",
+        ("fact", "repo", "pre-existing memory row", "high"),
+    ).lastrowid
+    execute(
+        conn,
+        "INSERT INTO memory_path (memory_id, path, blob_hash) VALUES (?, ?, ?)",
+        (memory_id, "src/thing.py", "deadbeef"),
+    )
+    evidence_id = execute(
+        conn,
+        "INSERT INTO evidence (memory_id, kind, description) VALUES (?, ?, ?)",
+        (memory_id, "free_text", "pre-existing evidence row"),
+    ).lastrowid
+    other_id = execute(
+        conn,
+        "INSERT INTO memory (type, scope, statement, confidence) VALUES (?, ?, ?, ?)",
+        ("fact", "repo", "a second memory to link against", "low"),
+    ).lastrowid
+    execute(
+        conn,
+        "INSERT INTO memory_link (from_id, to_id, link_type) VALUES (?, ?, ?)",
+        (memory_id, other_id, "duplicate_of"),
+    )
+    with pytest.raises(sqlite3.IntegrityError):
+        execute(
+            conn,
+            "INSERT INTO memory (type, scope, statement, confidence) VALUES (?, ?, ?, ?)",
+            ("fact", "repo", "x" * 600, "low"),
+        )
+
+    version = migrate(conn)
+
+    assert version == 4
+    assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+    assert conn.execute(
+        "SELECT statement FROM memory WHERE id = ?", (memory_id,)
+    ).fetchone()[0] == "pre-existing memory row"
+    assert conn.execute(
+        "SELECT path FROM memory_path WHERE memory_id = ?", (memory_id,)
+    ).fetchone()[0] == "src/thing.py"
+    assert conn.execute(
+        "SELECT description FROM evidence WHERE id = ?", (evidence_id,)
+    ).fetchone()[0] == "pre-existing evidence row"
+    assert conn.execute(
+        "SELECT link_type FROM memory_link WHERE from_id = ? AND to_id = ?", (memory_id, other_id)
+    ).fetchone()[0] == "duplicate_of"
+    assert conn.execute(
+        "SELECT statement FROM memory_fts WHERE rowid = ?", (memory_id,)
+    ).fetchone()[0] == "pre-existing memory row"
+
+    new_id = execute(
+        conn,
+        "INSERT INTO memory (type, scope, statement, confidence) VALUES (?, ?, ?, ?)",
+        ("fact", "repo", "x" * 600, "low"),
+    ).lastrowid
+    assert new_id > other_id
+    execute(
+        conn,
+        "INSERT INTO evidence (memory_id, kind, description) VALUES (?, ?, ?)",
+        (new_id, "free_text", "y" * 600),
+    )
     conn.close()
 
 

@@ -68,13 +68,13 @@ def test_record_refuses_nonexistent_path(tmp_path):
 def test_record_refuses_over_length_statement(tmp_path):
     repo, conn = _store(tmp_path)
 
-    with pytest.raises(ValidationError, match="exceeds 500 characters"):
+    with pytest.raises(ValidationError, match="exceeds 750 characters"):
         record_memory(
             conn,
             repo,
             type="fact",
             scope="repo",
-            statement="x" * 501,
+            statement="x" * 751,
             confidence="low",
         )
     assert list_memories(conn) == []

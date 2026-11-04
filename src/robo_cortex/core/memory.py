@@ -14,9 +14,9 @@ TYPES = {
 SCOPES = {"repo", "global"}
 CONFIDENCES = {"low", "medium", "high"}
 
-STATEMENT_MAX = 500
+STATEMENT_MAX = 750
 WHY_IT_MATTERS_MAX = 300
-ASSUMPTIONS_MAX = 500
+ASSUMPTIONS_MAX = 750
 
 # Live working knowledge vs. final/terminal history -- shared by retrieve.py
 # (ranking candidate set) and invalidate.py (what the staleness refresh and

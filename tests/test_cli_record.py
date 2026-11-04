@@ -74,7 +74,7 @@ def test_cli_record_batch_via_stdin(tmp_path):
 
     payload = "\n".join([
         json.dumps({"type": "fact", "scope": "repo", "statement": "one", "confidence": "low"}),
-        json.dumps({"type": "fact", "scope": "repo", "statement": "x" * 501, "confidence": "low"}),
+        json.dumps({"type": "fact", "scope": "repo", "statement": "x" * 751, "confidence": "low"}),
         json.dumps({"type": "fact", "scope": "repo", "statement": "two", "confidence": "high"}),
     ])
 

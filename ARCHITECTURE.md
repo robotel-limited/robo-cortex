@@ -32,7 +32,7 @@ omitted now because nothing in Phase 3's vertical slices demonstrably needs it
 solved by search.
 
 **Fields** (see `schema.sql` for exact types/constraints):
-`id`, `type`, `scope` (`repo` | `global`), `statement` (≤ 500 chars),
+`id`, `type`, `scope` (`repo` | `global`), `statement` (≤ 750 chars),
 `why_it_matters` (≤ 300 chars, optional), `status`, `status_reason`,
 `confidence` (`low`|`medium`|`high`, explicit, never inferred),
 `assumptions` (scope=`global` only — see §5), `created_at`,
@@ -99,7 +99,7 @@ never including `cold_storage` rows in the FTS index or a retrieval query.
 
 `evidence` table, one memory to many evidence rows: `kind` (`test_output` |
 `ci` | `commit` | `gitea_pr` | `gitea_issue` | `free_text` |
-`cold_storage_ref`), `description` (≤ 500 chars, human-readable, so a rotted
+`cold_storage_ref`), `description` (≤ 750 chars, human-readable, so a rotted
 `ref` still leaves useful context — this is the mechanism that makes a rotten
 link degrade to "unverifiable" instead of silent nonsense), `command`
 (nullable — the re-runnable proof command), `expected_outcome` (nullable),

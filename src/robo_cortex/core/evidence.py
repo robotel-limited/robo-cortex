@@ -7,7 +7,7 @@ EVIDENCE_KINDS = {
     "test_output", "ci", "commit", "gitea_pr", "gitea_issue",
     "free_text", "cold_storage_ref",
 }
-DESCRIPTION_MAX = 500
+DESCRIPTION_MAX = 750
 
 # ARCHITECTURE.md §3.1 -- mechanical, not judged: count and kind only.
 EVIDENCE_KIND_WEIGHTS = {

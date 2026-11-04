@@ -10,9 +10,9 @@ CREATE TABLE memory (
                         ('fact', 'decision', 'convention', 'hypothesis',
                          'experiment', 'lesson', 'open_question')),
   scope             TEXT NOT NULL CHECK (scope IN ('repo', 'global')),
-  statement         TEXT NOT NULL CHECK (length(statement) <= 500 AND length(statement) > 0),
+  statement         TEXT NOT NULL CHECK (length(statement) <= 750 AND length(statement) > 0),
   why_it_matters    TEXT CHECK (why_it_matters IS NULL OR length(why_it_matters) <= 300),
-  assumptions       TEXT CHECK (assumptions IS NULL OR length(assumptions) <= 500),
+  assumptions       TEXT CHECK (assumptions IS NULL OR length(assumptions) <= 750),
   status            TEXT NOT NULL DEFAULT 'provisional' CHECK (status IN
                         ('active', 'provisional', 'needs_review', 'superseded',
                          'invalidated', 'abandoned', 'archived')),
@@ -44,7 +44,7 @@ CREATE TABLE evidence (
   kind              TEXT NOT NULL CHECK (kind IN
                         ('test_output', 'ci', 'commit', 'gitea_pr', 'gitea_issue',
                          'free_text', 'cold_storage_ref')),
-  description       TEXT NOT NULL CHECK (length(description) <= 500 AND length(description) > 0),
+  description       TEXT NOT NULL CHECK (length(description) <= 750 AND length(description) > 0),
   command           TEXT,
   expected_outcome  TEXT,
   ref               TEXT,
