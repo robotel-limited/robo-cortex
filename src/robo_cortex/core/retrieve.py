@@ -304,6 +304,7 @@ def retrieve_context(
             "type": memory["type"],
             "statement": memory["statement"],
             "why_it_matters": memory["why_it_matters"],
+            "abstract": memory["abstract"],
             "status": memory["status"],
             "confidence": memory["confidence"],
             "score": components["total"],

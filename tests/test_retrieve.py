@@ -1,5 +1,6 @@
 import pytest
 
+from robo_cortex.core import memory as memory_mod
 from robo_cortex.core.db import connect, migrate
 from robo_cortex.core.memory import record_memory
 from robo_cortex.core.retrieve import WEIGHTS, retrieve_context
@@ -29,6 +30,19 @@ def test_relevant_memory_ranks_above_unrelated_one(tmp_path):
 
     assert result["meta"]["matched"] == 1
     assert result["data"][0]["statement"].startswith("The scanner batches")
+
+
+def test_retrieve_surfaces_abstract_field(tmp_path, monkeypatch):
+    repo, conn = _store(tmp_path)
+    monkeypatch.setattr(memory_mod, "generate_abstract", lambda statement: "Batches of fifty.")
+    record_memory(
+        conn, repo, type="decision", scope="repo", confidence="high",
+        statement="The scanner batches items in groups of fifty for the shared host.",
+    )
+
+    result = retrieve_context(conn, repo, task="why does the scanner use batches of fifty")
+
+    assert result["data"][0]["abstract"] == "Batches of fifty."
 
 
 def test_no_match_returns_honest_empty_pack(tmp_path):

@@ -12,6 +12,7 @@ CREATE TABLE memory (
   scope             TEXT NOT NULL CHECK (scope IN ('repo', 'global')),
   statement         TEXT NOT NULL CHECK (length(statement) <= 750 AND length(statement) > 0),
   why_it_matters    TEXT CHECK (why_it_matters IS NULL OR length(why_it_matters) <= 300),
+  abstract          TEXT,
   assumptions       TEXT CHECK (assumptions IS NULL OR length(assumptions) <= 750),
   status            TEXT NOT NULL DEFAULT 'provisional' CHECK (status IN
                         ('active', 'provisional', 'needs_review', 'superseded',

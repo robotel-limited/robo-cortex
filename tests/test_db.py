@@ -9,7 +9,7 @@ from robo_cortex.core.errors import BusyError
 def test_migrate_from_empty_creates_schema(tmp_path):
     conn = connect(tmp_path / "memory.db")
     version = migrate(conn)
-    assert version == 4
+    assert version == 5
     tables = {
         row[0]
         for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -22,8 +22,8 @@ def test_migrate_is_idempotent_on_same_connection(tmp_path):
     conn = connect(tmp_path / "memory.db")
     migrate(conn)
     version_again = migrate(conn)
-    assert version_again == 4
-    assert current_version(conn) == 4
+    assert version_again == 5
+    assert current_version(conn) == 5
     conn.close()
 
 
@@ -36,7 +36,7 @@ def test_migrate_is_idempotent_across_reopened_connections(tmp_path):
 
     second = connect(db_path)
     version = migrate(second)
-    assert version == 4
+    assert version == 5
     second.close()
 
 
@@ -106,7 +106,7 @@ def test_0004_widens_limits_and_preserves_existing_rows_and_fk_integrity(tmp_pat
 
     version = migrate(conn)
 
-    assert version == 4
+    assert version == 5
     assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
     assert conn.execute(
         "SELECT statement FROM memory WHERE id = ?", (memory_id,)

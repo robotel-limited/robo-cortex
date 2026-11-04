@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from . import db as dbmod
+from .abstractor import generate_abstract
 from .errors import AmbiguousIdError, NotFoundError, ValidationError
 from .git import blob_hash_at_head, working_tree_hash
 from .text import fts_query_string, tokenize_without_stopwords
@@ -29,7 +30,7 @@ EXCLUDED_STATUSES = ("superseded", "invalidated", "abandoned", "archived")
 DUPLICATE_SIMILARITY_THRESHOLD = 0.6
 
 _MEMORY_COLUMNS = [
-    "id", "type", "scope", "statement", "why_it_matters", "assumptions",
+    "id", "type", "scope", "statement", "why_it_matters", "abstract", "assumptions",
     "status", "status_reason", "confidence", "created_at",
     "last_verified_at", "created_by", "use_count", "last_used_at",
 ]
@@ -154,14 +155,20 @@ def record_memory(
     if lesson_from is not None:
         get_memory(conn, lesson_from)  # existence check, raises NotFoundError
 
+    # Synchronous local-Ollama call -- deliberately outside the transaction
+    # below: it's a network call, and a sqlite BEGIN must never stay open
+    # across one. generate_abstract() is fail-open by itself (never raises),
+    # so no try/except is needed here.
+    abstract = generate_abstract(statement)
+
     conn.execute("BEGIN")
     try:
         cursor = dbmod.execute(
             conn,
             "INSERT INTO memory "
-            "(type, scope, statement, why_it_matters, assumptions, confidence, created_by) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (type, scope, statement, why_it_matters, assumptions, confidence, created_by),
+            "(type, scope, statement, why_it_matters, abstract, assumptions, confidence, created_by) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (type, scope, statement, why_it_matters, abstract, assumptions, confidence, created_by),
         )
         memory_id = cursor.lastrowid
         for path, blob_hash in resolved_paths:

@@ -2,6 +2,7 @@ import subprocess
 
 import pytest
 
+from robo_cortex.core import memory as memory_mod
 from robo_cortex.core.db import connect, migrate
 from robo_cortex.core.errors import NotFoundError, ValidationError
 from robo_cortex.core.memory import get_memory, list_memories, record_memory
@@ -39,6 +40,43 @@ def test_record_then_show_round_trip(tmp_path):
     assert fetched["paths"] == [
         {"path": "src/fixture_a/scanner.py", "blob_hash": result["paths"][0]["blob_hash"]}
     ]
+
+
+def test_record_stores_generated_abstract(tmp_path, monkeypatch):
+    repo, conn = _store(tmp_path)
+    monkeypatch.setattr(memory_mod, "generate_abstract", lambda statement: "A short summary.")
+
+    result = record_memory(
+        conn,
+        repo,
+        type="decision",
+        scope="repo",
+        statement="Scanner batches at 50 items because larger batches time out.",
+        confidence="high",
+    )
+
+    fetched = get_memory(conn, result["id"])
+    assert fetched["abstract"] == "A short summary."
+
+
+def test_record_abstract_fail_open_stores_null(tmp_path, monkeypatch):
+    repo, conn = _store(tmp_path)
+    # generate_abstract itself is fail-open (never raises) -- simulate the
+    # failure path the way it actually surfaces: a None return, not a
+    # try/except wrapped around record_memory.
+    monkeypatch.setattr(memory_mod, "generate_abstract", lambda statement: None)
+
+    result = record_memory(
+        conn,
+        repo,
+        type="decision",
+        scope="repo",
+        statement="Scanner batches at 50 items because larger batches time out.",
+        confidence="high",
+    )
+
+    fetched = get_memory(conn, result["id"])
+    assert fetched["abstract"] is None
 
 
 def test_show_unknown_id_raises_not_found(tmp_path):
