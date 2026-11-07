@@ -25,7 +25,8 @@ CREATE TABLE memory (
   last_verified_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   created_by        TEXT,
   use_count         INTEGER NOT NULL DEFAULT 0,
-  last_used_at      TEXT
+  last_used_at      TEXT,
+  valid_until       TEXT
 );
 
 -- assumptions is only meaningful for scope = 'global'; enforced in application code
