@@ -4,6 +4,13 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-07
+
+### Added
+
+- **`valid_until` temporal validity field.** `record_memory`/`roco record` take an optional ISO-8601 `valid_until` timestamp (migration `0006_add_valid_until.sql`, nullable, no default-row impact). There is no separate `valid_from` field — a memory is considered valid starting from its own existing `created_at`, automatically. `get_memory` and `retrieve_context` surface `valid_until` plus a computed `expired: true/false` flag whenever `valid_until` is set (both fields omitted for the common no-expiry case, matching the existing null-field-omission convention). Not auto-excluded from ranking — an expired memory is still returned, just flagged, so the caller/agent decides what to do with it, same fail-open posture as the `abstract` field (0.5.0).
+- **`link_memories` MCP tool.** Exposes the existing `create_link` core function (previously CLI-only via `roco link`) over MCP, so an agent can flag two memories as `contradicts` or `duplicate_of` without shelling out. `retrieve_context` items now carry a per-item `contradicted_by: [id, ...]` field whenever a `contradicts` link exists, naming the specific conflicting memory — previously only an aggregate `meta.contradicted` count was available, with no way to tell *which* returned items were the conflicting pair.
+
 ## [0.7.0] — 2026-11-04
 
 ### Added

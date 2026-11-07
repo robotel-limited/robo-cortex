@@ -168,6 +168,37 @@ def test_needs_review_and_contradicted_counts_are_exact(tmp_path):
     assert result["meta"]["needs_review"] == 1
     assert result["meta"]["contradicted"] == 2
 
+    by_id = {item["id"]: item for item in result["data"]}
+    assert by_id[contradicted_a["id"]]["contradicted_by"] == [contradicted_b["id"]]
+    assert by_id[contradicted_b["id"]]["contradicted_by"] == [contradicted_a["id"]]
+    assert "contradicted_by" not in by_id[flagged["id"]]
+
+
+def test_valid_until_surfaces_expired_flag(tmp_path):
+    repo, conn = _store(tmp_path)
+    record_memory(
+        conn, repo, type="fact", scope="repo", confidence="low",
+        statement="scanner batching fact with a past expiry",
+        valid_until="2020-01-01T00:00:00Z",
+    )
+    record_memory(
+        conn, repo, type="fact", scope="repo", confidence="low",
+        statement="scanner batching fact with a future expiry",
+        valid_until="2099-01-01T00:00:00Z",
+    )
+    record_memory(
+        conn, repo, type="fact", scope="repo", confidence="low",
+        statement="scanner batching fact with no expiry at all",
+    )
+
+    result = retrieve_context(conn, repo, task="scanner batching fact")
+
+    by_statement = {item["statement"]: item for item in result["data"]}
+    assert by_statement["scanner batching fact with a past expiry"]["expired"] is True
+    assert by_statement["scanner batching fact with a future expiry"]["expired"] is False
+    assert "valid_until" not in by_statement["scanner batching fact with no expiry at all"]
+    assert "expired" not in by_statement["scanner batching fact with no expiry at all"]
+
 
 def test_global_scope_memories_not_yet_returned(tmp_path):
     """Scope-B consultation lands in Stage 8; Stage 5 is scope='repo' only."""

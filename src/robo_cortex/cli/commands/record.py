@@ -97,6 +97,7 @@ def run(args) -> int:
                 assumptions=args.assumptions,
                 paths=args.paths,
                 lesson_from=args.lesson_from,
+                valid_until=args.valid_until,
             )
     else:
         with _store(args.repo) as (repo_root, conn):
@@ -111,6 +112,7 @@ def run(args) -> int:
                 assumptions=args.assumptions,
                 paths=args.paths,
                 lesson_from=args.lesson_from,
+                valid_until=args.valid_until,
             )
 
     if args.json:
@@ -158,6 +160,10 @@ def register(subparsers):
     p.add_argument(
         "--lesson-from", dest="lesson_from", type=int, default=None,
         help="Link a new type=lesson memory back to the abandoned memory it compresses",
+    )
+    p.add_argument(
+        "--valid-until", dest="valid_until", default=None,
+        help="ISO-8601 timestamp after which this memory is stale (default: no expiry)",
     )
     p.add_argument(
         "--batch",

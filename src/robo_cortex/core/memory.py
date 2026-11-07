@@ -32,8 +32,25 @@ DUPLICATE_SIMILARITY_THRESHOLD = 0.6
 _MEMORY_COLUMNS = [
     "id", "type", "scope", "statement", "why_it_matters", "abstract", "assumptions",
     "status", "status_reason", "confidence", "created_at",
-    "last_verified_at", "created_by", "use_count", "last_used_at",
+    "last_verified_at", "created_by", "use_count", "last_used_at", "valid_until",
 ]
+
+
+def _validate_valid_until(valid_until: str | None) -> None:
+    """`valid_until` is an optional ISO-8601 timestamp (same shape as
+    `created_at`/`last_verified_at`). `valid_from` is deliberately not a
+    separate field -- `created_at` already marks when a memory became
+    valid (Sorin's call, 2026-11-07): a memory is valid from the moment
+    it's recorded until `valid_until` (or forever, if NULL)."""
+    if valid_until is None:
+        return
+    from datetime import datetime
+    try:
+        datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValidationError(
+            f"valid_until must be an ISO-8601 timestamp (e.g. '2027-01-01T00:00:00Z'), got {valid_until!r}"
+        ) from error
 
 
 def validate_memory_fields(type_, scope, statement, confidence, why_it_matters, assumptions):
@@ -129,6 +146,7 @@ def record_memory(
     paths: list[str] | None = None,
     created_by: str | None = None,
     lesson_from: int | None = None,
+    valid_until: str | None = None,
 ) -> dict:
     """Create a memory. Validates everything, including that every linked
     path exists at HEAD, before writing anything — a dead link is refused
@@ -137,8 +155,15 @@ def record_memory(
     `lesson_from`: dead-end compression (ARCHITECTURE.md §6) — recording a
     `lesson` and linking it back to the `abandoned` memory it compresses is
     one call, not two separate record+link calls.
+
+    `valid_until` (migration 0006): optional ISO-8601 timestamp after which
+    this memory is stale. NULL (the default) means no expiry. Surfaced by
+    `get_memory`/`retrieve_context` as `expired: true` once past; not
+    auto-excluded from ranking -- the caller/agent decides what to do with
+    an expired-but-returned item, same fail-open posture as `abstract`.
     """
     validate_memory_fields(type, scope, statement, confidence, why_it_matters, assumptions)
+    _validate_valid_until(valid_until)
 
     if lesson_from is not None and type != "lesson":
         raise ValidationError("lesson_from is only valid when type='lesson'")
@@ -166,9 +191,9 @@ def record_memory(
         cursor = dbmod.execute(
             conn,
             "INSERT INTO memory "
-            "(type, scope, statement, why_it_matters, abstract, assumptions, confidence, created_by) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (type, scope, statement, why_it_matters, abstract, assumptions, confidence, created_by),
+            "(type, scope, statement, why_it_matters, abstract, assumptions, confidence, created_by, valid_until) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (type, scope, statement, why_it_matters, abstract, assumptions, confidence, created_by, valid_until),
         )
         memory_id = cursor.lastrowid
         for path, blob_hash in resolved_paths:
@@ -241,6 +266,13 @@ def record_batch(conn, repo_root: Path, lines: list[str]) -> dict:
     return {"created": len(created_ids), "created_ids": created_ids, "failed": failed}
 
 
+def _is_expired(valid_until: str | None) -> bool:
+    if valid_until is None:
+        return False
+    from datetime import datetime, timezone
+    return datetime.fromisoformat(valid_until.replace("Z", "+00:00")) < datetime.now(timezone.utc)
+
+
 def get_memory(conn, memory_id: int) -> dict:
     row = conn.execute(
         f"SELECT {', '.join(_MEMORY_COLUMNS)} FROM memory WHERE id = ?",
@@ -250,6 +282,7 @@ def get_memory(conn, memory_id: int) -> dict:
         raise NotFoundError(f"no memory with id {memory_id}")
 
     data = dict(zip(_MEMORY_COLUMNS, row))
+    data["expired"] = _is_expired(data["valid_until"])
 
     path_rows = conn.execute(
         "SELECT path, blob_hash FROM memory_path WHERE memory_id = ? ORDER BY path",

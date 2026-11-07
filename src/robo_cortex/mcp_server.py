@@ -36,6 +36,7 @@ from .core.evidence import attach_evidence as core_attach_evidence
 from .core.evidence import verify_evidence as core_verify_evidence
 from .core.invalidate import affected as core_affected
 from .core.lifecycle import change_status as core_change_status
+from .core.lifecycle import create_link as core_create_link
 from .core.memory import find_memory_store
 from .core.memory import get_memory as core_get_memory
 from .core.memory import record_memory as core_record_memory
@@ -106,7 +107,7 @@ _LIST_AFFECTED_DESCRIPTION = (
 
 def build_server(repo_arg: str | None = None) -> FastMCP:
     """Resolve the target repo, open both stores once, and register all
-    eight tools from MCP_TOOLS.md against them. Global store is skipped
+    nine tools from MCP_TOOLS.md against them. Global store is skipped
     if ROBO_CORTEX_NO_GLOBAL is set.
     """
     repo_root, local_conn = open_store(repo_arg)
@@ -142,6 +143,7 @@ def build_server(repo_arg: str | None = None) -> FastMCP:
         assumptions: str | None = None,
         paths: list[str] | None = None,
         lesson_from: int | None = None,
+        valid_until: str | None = None,
     ) -> dict:
         """Create a memory -- the only way new memories enter the store
         (explicit authorship). Linked paths are validated to exist at HEAD
@@ -149,6 +151,11 @@ def build_server(repo_arg: str | None = None) -> FastMCP:
         scope='global' memories are written to the reusable cross-project
         store, require non-empty assumptions, and cannot have linked paths.
         No inline evidence field -- call attach_evidence afterward.
+
+        `valid_until` (optional ISO-8601 timestamp, e.g. '2027-01-01'):
+        marks this memory stale past that date. There is no `valid_from` --
+        a memory is valid starting from its own `created_at`, automatically.
+        Omit for a memory with no expiry (the default).
         """
         target_conn = global_conn if scope == "global" else local_conn
         return core_record_memory(
@@ -162,6 +169,7 @@ def build_server(repo_arg: str | None = None) -> FastMCP:
             assumptions=assumptions,
             paths=paths,
             lesson_from=lesson_from,
+            valid_until=valid_until,
         )
 
     @server.tool(name="attach_evidence", description=_ATTACH_EVIDENCE_DESCRIPTION)
@@ -224,6 +232,32 @@ def build_server(repo_arg: str | None = None) -> FastMCP:
             store, repo_root, memory_id, new_status, reason,
             supersedes_link_to=supersedes_link_to,
         )
+
+    @server.tool(name="link_memories")
+    def link_memories_tool(
+        from_id: int,
+        to_id: int,
+        link_type: str,
+        scope: str | None = None,
+    ) -> dict:
+        """Flag two memories as `contradicts` (mutually conflicting claims)
+        or `duplicate_of` (same claim, recorded twice). Both ids must live
+        in the same store (repo or global) -- `memory_link` is a same-store
+        reference, so a repo/global pair is refused. Once linked,
+        `retrieve_context` surfaces each contradicting item's
+        `contradicted_by` field so a caller sees which other memory it
+        conflicts with, not just an aggregate count. Use `change_status`
+        with `supersedes_link_to` instead when one memory fully replaces
+        another (that is a status transition, not a same-status link).
+        """
+        store = find_memory_store(local_conn, global_conn, from_id, scope=scope)
+        store2 = find_memory_store(local_conn, global_conn, to_id, scope=scope)
+        if store is not store2:
+            raise ValueError(
+                "link_memories: cannot link memories across the repo and "
+                "global stores (memory_link is a same-store reference)"
+            )
+        return core_create_link(store, from_id, to_id, link_type)
 
     @server.tool(name="search_memory", description=_SEARCH_MEMORY_DESCRIPTION)
     def search_memory_tool(

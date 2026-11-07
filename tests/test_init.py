@@ -15,7 +15,7 @@ def test_init_creates_cortex_dir_and_db(tmp_path):
     db_path = Path(result["db_path"])
     assert db_path.exists()
     assert db_path.parent.name == ".cortex"
-    assert result["schema_version"] == 5
+    assert result["schema_version"] == 6
     assert Path(result["repo_root"]).resolve() == repo.resolve()
 
 

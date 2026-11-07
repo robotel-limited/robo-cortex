@@ -88,7 +88,7 @@ def test_list_tools_matches_mcp_tools_md(tmp_path):
     names = {tool.name for tool in result.tools}
     assert names == {
         "retrieve_context", "record_memory", "attach_evidence", "get_memory",
-        "change_status", "search_memory", "list_affected", "verify_evidence",
+        "change_status", "link_memories", "search_memory", "list_affected", "verify_evidence",
     }
 
 
@@ -133,6 +133,66 @@ def test_record_memory_then_get_memory_round_trip(tmp_path):
     assert record_result["status"] == "provisional"
     assert fetched["statement"] == "Scanner batches at 50 items via MCP."
     assert fetched["paths"][0]["path"] == "src/fixture_a/scanner.py"
+
+
+def test_record_memory_valid_until_surfaces_on_get_memory(tmp_path):
+    repo = build_fixture_repo_a(tmp_path)
+    _init(repo)
+
+    async def scenario(session):
+        record_result = await _call(session, "record_memory", {
+            "type": "fact", "scope": "repo", "confidence": "low",
+            "statement": "Scanner batching, stale after 2020.",
+            "valid_until": "2020-01-01T00:00:00Z",
+        })
+        return await _call(session, "get_memory", {"memory_id": record_result["id"]})
+
+    fetched = run_scenario(repo, scenario)
+    assert fetched["valid_until"] == "2020-01-01T00:00:00Z"
+    assert fetched["expired"] is True
+
+
+def test_link_memories_contradicts_surfaces_in_retrieve_context(tmp_path):
+    repo = build_fixture_repo_a(tmp_path)
+    _init(repo)
+
+    async def scenario(session):
+        a = await _call(session, "record_memory", {
+            "type": "fact", "scope": "repo", "confidence": "low",
+            "statement": "scanner batching fact version A via MCP",
+        })
+        b = await _call(session, "record_memory", {
+            "type": "fact", "scope": "repo", "confidence": "low",
+            "statement": "scanner batching fact version B via MCP",
+        })
+        link_result = await _call(session, "link_memories", {
+            "from_id": a["id"], "to_id": b["id"], "link_type": "contradicts",
+        })
+        context = await _call(session, "retrieve_context", {"task": "scanner batching fact via MCP"})
+        return a, b, link_result, context
+
+    a, b, link_result, context = run_scenario(repo, scenario)
+    assert link_result == {"from_id": a["id"], "to_id": b["id"], "link_type": "contradicts"}
+    by_id = {item["id"]: item for item in context["data"]}
+    assert by_id[a["id"]]["contradicted_by"] == [b["id"]]
+    assert by_id[b["id"]]["contradicted_by"] == [a["id"]]
+
+
+def test_link_memories_rejects_self_link(tmp_path):
+    repo = build_fixture_repo_a(tmp_path)
+    _init(repo)
+
+    async def scenario(session):
+        a = await _call(session, "record_memory", {
+            "type": "fact", "scope": "repo", "confidence": "low",
+            "statement": "a lonely fact",
+        })
+        return await _call_expect_error(session, "link_memories", {
+            "from_id": a["id"], "to_id": a["id"], "link_type": "contradicts",
+        })
+
+    message = run_scenario(repo, scenario)
+    assert "cannot link a memory to itself" in message
 
 
 def test_record_memory_dead_path_fails_loudly(tmp_path):

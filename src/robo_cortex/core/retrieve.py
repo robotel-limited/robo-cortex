@@ -123,6 +123,21 @@ def _is_contradicted(conn, memory_id: int) -> bool:
     return row is not None
 
 
+def _contradicted_by(conn, memory_id: int) -> list[int]:
+    """The other memory id(s) this one contradicts, per `memory_link`
+    (link_type='contradicts' is symmetric by convention -- either side can
+    be `from_id`). Surfaced per-item in `retrieve_context`'s `data` so a
+    caller sees *which* memory conflicts, not just the aggregate
+    `meta.contradicted` count `_is_contradicted` already fed."""
+    rows = conn.execute(
+        "SELECT to_id FROM memory_link WHERE link_type = 'contradicts' AND from_id = ? "
+        "UNION "
+        "SELECT from_id FROM memory_link WHERE link_type = 'contradicts' AND to_id = ?",
+        (memory_id, memory_id),
+    ).fetchall()
+    return sorted(r[0] for r in rows)
+
+
 def score_components(conn, memory: dict, task_paths: list[str], text_match: float, now: datetime) -> dict:
     memory_paths = [p["path"] for p in memory["paths"]]
     components = {
@@ -297,7 +312,7 @@ def retrieve_context(
     _success, usage_warnings = _record_usage(returned, now)
 
     data = []
-    for _item_conn, memory, components in returned:
+    for item_conn, memory, components in returned:
         item = {
             "id": memory["id"],
             "scope": memory["scope"],
@@ -309,6 +324,12 @@ def retrieve_context(
             "confidence": memory["confidence"],
             "score": components["total"],
         }
+        if memory["valid_until"] is not None:
+            item["valid_until"] = memory["valid_until"]
+            item["expired"] = memory["expired"]
+        contradicted_by = _contradicted_by(item_conn, memory["id"])
+        if contradicted_by:
+            item["contradicted_by"] = contradicted_by
         if explain:
             item["score_breakdown"] = components
         data.append(item)

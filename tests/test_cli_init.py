@@ -29,7 +29,7 @@ def test_cli_init_json_output(tmp_path):
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["schema_version"] == 5
+    assert payload["schema_version"] == 6
     assert payload["gitignore_updated"] is True
 
 
